@@ -198,26 +198,6 @@
 		return chartSetting.get('height') * DEFAULT_RADIUS_RATE;
 	}
 
-	function sortById(items) {
-		var ret = [];
-		for (var i = 0, iLen = items.length; i < iLen; i++) {
-			var item = items[i];
-			var id = item.get('id');
-			var inserted = false;
-			for (var j = 0, jLen = ret.length; j < jLen; j++) {
-				if (id < ret[j].get('id')) {
-					ret.splice(j, 0, item);
-					inserted = true;
-					break;
-				}
-			}
-			if (!inserted) {
-				ret.push(item);
-			}
-		}
-		return ret;
-	}
-
 	/**
 	 * 指定したマージンの値を取得します
 	 *
@@ -2108,7 +2088,7 @@
 
 			_appendLinesForSvg: function(lines, preRendererChartModel, rate) {
 				var $root = $(this.rootElement);
- 				var chartItems = sortById(lines || this.chartDataSource.toArray());
+ 				var chartItems = lines || this.chartDataSource.toArray();
 
 				if (!chartItems || !chartItems.length) {
 					return;
@@ -3043,7 +3023,7 @@
 
 			_appendLines: function(lines, rate) {
 				var $root = $(this.rootElement);
-				var chartItems = sortById(lines || this.chartDataSource.toArray());
+				var chartItems = lines || this.chartDataSource.toArray();
 
 				if (!chartItems || !chartItems.length) {
 					return;
