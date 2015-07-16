@@ -2133,7 +2133,6 @@
 				var $root = $(this.rootElement);
 				$root.empty();
 
-				var lineData = this.chartDataSource.toArray();
 				var lineShape = graphicRenderer.createShapeElm();
 				graphicRenderer.css(lineShape, {
 					width: this.chartSetting.get('width'),
@@ -2157,27 +2156,30 @@
 				lineShape.coordsize = this.COORDSIZE;
 
 				var lineShapePath = '';
-
-				var len = lineData.length;
-				for (var i = 0; i < len; i++) {
-					if (i === 0) {
-						var x1 = parseInt(lineData[i].get('fromX'));
-						var y1 = parseInt(lineData[i].get('fromY'));
+				
+				var current = this.chartDataSource.dataSource.sequence.current()
+				- chartSetting.get('movedNum');
+				var start = Math.max(1, current - this.chartSetting.get('dispDataSize'));
+				for (var i = start; i < current; i++) {
+					var lineData = this.chartDataSource.get(i);
+					if (i === start) {
+						var x1 = parseInt(lineData.get('fromX'));
+						var y1 = parseInt(lineData.get('fromY'));
 						lineShapePath += h5format('m {0},{1} l{0}, {1}', x1, y1);
 					}
-					var x2 = parseInt(lineData[i].get('toX'));
-					var y2 = parseInt(lineData[i].get('toY'));
+					var x2 = parseInt(lineData.get('toX'));
+					var y2 = parseInt(lineData.get('toY'));
 
 					lineShapePath += h5format(',{0},{1}', x2, y2);
 				}
 				if (fill) {
-					var firstX = parseInt(lineData[0].get('fromX'));
-					var lastX = parseInt(lineData[len - 1].get('toX'));
+					var firstX = parseInt(this.chartDataSource.get(start).get('fromX'));
+					var lastX = parseInt(this.chartDataSource.get(current - 1).get('toX'));
 					var height = this.chartSetting.get('height');
 					lineShapePath += h5format(',{0},{1}', lastX, height);
 					lineShapePath += h5format(',{0},{1}', firstX, height);
 					lineShapePath += h5format(',{0},{1}', firstX,
-							parseInt(lineData[0].get('fromY')));
+							parseInt(this.chartDataSource.get(start).get('fromY')));
 				}
 				lineShape.path = lineShapePath + 'e';
 				$root[0].appendChild(lineShape);
