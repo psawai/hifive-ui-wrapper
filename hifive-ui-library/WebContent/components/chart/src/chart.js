@@ -2875,7 +2875,7 @@
 			_getCentralPos: function(chartItem) {
 				return {
 					x: (chartItem.get('x') + chartItem.get('preX') + this._radian) / 3,
-					y: (chartItem.get('y') + chartItem.get('preY') + this._radian) / 3,
+					y: (chartItem.get('y') + chartItem.get('preY') + this._radian) / 3
 				};
 			},
 
@@ -3078,7 +3078,7 @@
 			_getCentralPos: function(chartItem) {
 				return {
 					x: (chartItem.get('x') + chartItem.get('preX') + this._radian) / 3,
-					y: (chartItem.get('y') + chartItem.get('preY') + this._radian) / 3,
+					y: (chartItem.get('y') + chartItem.get('preY') + this._radian) / 3
 				};
 			},
 
@@ -3125,7 +3125,7 @@
 				}
 
 				return this.xLabelArray;
-			},
+			}
 		};
 
 		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, radarSchema,
