@@ -164,7 +164,7 @@
 
 
 	// DataSourceから発生するイベント内で持つ更新情報のプロパティ名
-	var EVENT_PROP_NAMES = ['add', 'remove', 'change'];
+	var EVENT_PROP_NAMES = ['add', 'remove', 'change', 'removeAll'];
 
 	/**
 	 * グループ内でのY座標の位置を計算します
@@ -261,9 +261,9 @@
 		this._count = 0;
 		this._map = {};
 
-		for ( var modelName in chartDataModelManager.models) {
-			chartDataModelManager.dropModel(modelName);
-		}
+//		for ( var modelName in chartDataModelManager.models) {
+//			chartDataModelManager.dropModel(modelName);
+//		}
 
 		this._isInUpdate = false;
 		this._updateLog = {};
@@ -409,6 +409,9 @@
 					this._updateLog[ev.target.name][type] = [];
 				}
 				var data = ev[type];
+				if (!data) {
+					continue;
+				}
 				for (var i = 0, len = data.length; i < len; i++) {
 					this._updateLog[ev.target.name][type].push(data[i]);
 				}
@@ -538,11 +541,7 @@
 		 * @memberOf DataSource
 		 */
 		add: function(data) {
-			var id = this.sequence.next();
-			var d = $.extend(true, {}, data);
-			d.id = id;
-			this.dataMap[id] = d;
-			this.length++;
+			var d = this._add(data);
 
 			if (this.length > this.dataSize) {
 				this.remove(id - this.dataSize);
@@ -556,7 +555,31 @@
 
 			this.dispatchEvent(event);
 
-			return id;
+			return d.id;
+		},
+		
+		addAll: function(arr) {
+			var ret = [];
+			for (var i=0, len = arr.length; i < len; i++) {
+				var d = this.add(arr[i]);
+				ret.push(d);
+			}
+//			var event = {
+//				type: 'dataChange',
+//				add: ret,
+//				target: this
+//			};
+//
+//			this.dispatchEvent(event);
+		},
+		
+		_add: function(data) {
+			var id = this.sequence.next();
+			var d = $.extend(true, {}, data);
+			d.id = id;
+			this.dataMap[id] = d;
+			this.length++;
+			return d;
 		},
 
 		/**
@@ -573,6 +596,24 @@
 			}
 		},
 
+		/**
+		 * 指定したIDのデータを削除します
+		 *
+		 * @memberOf DataSource
+		 */
+		removeAll: function() {
+			var arr  = this.toArray();
+			this.dataMap = [];
+			this.length = 0;
+			
+			var event = {
+				type: 'dataChange',
+				removeAll: arr,
+				target: this
+			};
+
+			this.dispatchEvent(event);
+		},
 		/**
 		 * データソースが持つデータを配列の形式で取得します
 		 *
@@ -672,25 +713,25 @@
 
 		_init: function(dataSource, seriesSetting, chartSetting, schema) {
 			
-		this.dataSource = dataSource;
-		this.name = dataSource.name;
-		this.seriesSetting = seriesSetting;
-		this._chartSetting = chartSetting;
+			this.dataSource = dataSource;
+			this.name = dataSource.name;
+			this.seriesSetting = seriesSetting;
+			this._chartSetting = chartSetting;
 
-		this.xLabelArray = null;
+			this.xLabelArray = null;
 
-		this.setPropNames(seriesSetting.type, seriesSetting.propNames);
+			this.setPropNames(seriesSetting.type, seriesSetting.propNames);
 
-		this.chartModel = chartDataModelManager.createModel({
-			name: 'chartModel_' + rendererNum + '_' + this.name,
-			schema: schema
-		});
+			this.chartModel = chartDataModelManager.createModel({
+				name: 'chartModel_' + rendererNum + '_' + this.name,
+				schema: schema
+			});
 
-		rendererNum++;
+			rendererNum++;
 
-		// イベントリスナの追加
-		dataSource.addEventListener('dataChange', this.own(this._addEventListener));
-	},
+			// イベントリスナの追加
+			dataSource.addEventListener('dataChange', this.own(this._addEventListener));
+		},
 
 		/**
 		 * データを読み込む。系列の設定で指定されている場合はそれを利用します
@@ -930,6 +971,8 @@
 			this.dispatchEvent({
 				type: 'dataChange',
 				add: arr,
+				remove: ev.remove,
+				removeAll: ev.removeAll,
 				target: this
 			});
 		},
@@ -980,7 +1023,7 @@
 	};
 
 	h5.mixin.eventDispatcher.mix(ChartDataSource.prototype);
-
+	
 	function RadarChartDataSource(dataSource, seriesSetting, chartSetting, schema) {
 		this._init(dataSource, seriesSetting, chartSetting, schema);
 		this._radius = calcDefaultRadius(this._chartSetting);
@@ -1034,7 +1077,7 @@
 			};
 		}
 	};
-
+	
 	RadarChartDataSource.prototype = $.extend({}, ChartDataSource.prototype, radarChartDataSource);
 
 	
@@ -1042,7 +1085,7 @@
 		this._init(dataSource, seriesSetting, chartSetting, schema);
 		this._radius = calcDefaultRadius(this._chartSetting);
 	}
-	
+
 	/**
 	 * チャート描画用のデータソース
 	 *
@@ -1064,7 +1107,7 @@
 			};
 		}
 	};
-
+	
 	ArcChartDataSource.prototype = $.extend({}, RadarChartDataSource.prototype, arcChartDataSource);
 
 	function createChartDataSource(dataSource, seriesSetting, chartSetting, schema) {
@@ -1213,7 +1256,22 @@
 			},
 
 			_addEventListener: function(ev) {
-				if (!ev.add || ev.add.length != 1) {
+				if (!ev.add) {
+					return;
+				}
+				
+				if (ev.add.length != 1) {
+					if (ev.removeAll) {
+						this.chartDataSource.removeAll();
+	
+						var addedData = [];
+						for (var i = 0, len = ev.add.length; i < len; i++) {
+							addedData.push(this.toData(ev.add[i]));
+						}
+						this.chartDataSource.create(addedData);
+						
+						this._redraw();
+					}
 					return;
 				}
 
@@ -1265,6 +1323,10 @@
 					var intId = parseInt(id);
 					// 描画範囲のローソクは座標情報を計算する
 					var obj = this.chartDataSource.getDataObj(intId);
+					if (!obj) {
+						continue;
+					}
+
 					var chartItem = this.chartDataSource.get(obj.id);
 					if (chartItem != null) {
 						chartItem.set(this.toData(obj, id));
@@ -2026,6 +2088,10 @@
 				}
 				requestAnimationFrame(doAnimation);
 			},
+			
+			_redraw: function() {
+				this._appendLines(this.chartDataSource.toArray());
+			},
 
 			_appendChart: function(elms) {
 				this._appendLines();
@@ -2409,6 +2475,10 @@
 				}
 				requestAnimationFrame(this.own(doAnimation));
 			},
+			
+			_redraw: function() {
+				this._appendBars(this.chartDataSource.toArray());
+			},
 
 			_createBarDataItems: function(preRendererChartModel) {
 				this.chartDataSource.removeAll();
@@ -2711,6 +2781,10 @@
 				}
 				requestAnimationFrame(this.own(doAnimation));
 			},
+			
+			_redraw: function() {
+				this._appendPies(this.chartDataSource.toArray());
+			},
 
 			_createPieDataItems: function() {
 				this.chartDataSource.removeAll();
@@ -2951,6 +3025,14 @@
 					}
 				}
 				requestAnimationFrame(this.own(doAnimation));
+			},
+
+			toData: function(data){
+				return this.chartDataSource.toData(data);
+			},
+			
+			_redraw: function() {
+				this._appendLines(this.chartDataSource.toArray());
 			},
 
 			_appendLines: function(lines, rate) {
@@ -3649,6 +3731,13 @@
 				var rightId = firstChartRenderer.chartDataSource.dataSource.sequence.current() - 1;
 				this.chartSetting.set('translateX', -this.chartSetting.get('dx')
 						* (rightId + paddingRight - this.chartSetting.get('movedNum')));
+				firstChartRenderer.chartDataSource.addEventListener('dataChange', this.own(function(ev) {
+					var rightId = ev.target.dataSource.sequence.current() - 1;
+					this.chartSetting.set('translateX', -this.chartSetting.get('dx')
+							* (rightId + paddingRight - this.chartSetting.get('movedNum')));
+					var xLabelArray = firstChartRenderer.getXLabelArray();
+					this.axisRenderer.showAxisLabels(xLabelArray);
+				}));
 			}
 		},
 
