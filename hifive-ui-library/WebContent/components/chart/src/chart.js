@@ -657,6 +657,21 @@
 	 * @class ChartDataSource
 	 */
 	function ChartDataSource(dataSource, seriesSetting, chartSetting, schema) {
+		this._init(dataSource, seriesSetting, chartSetting, schema);
+	}
+
+	ChartDataSource.prototype = {
+		/**
+		 * コンテキストを自分自身にした関数を取得します
+		 *
+		 * @memberOf ChartDataSource
+		 * @param {Function} func 関数
+		 * @returns {Function} コンテキストを自分自身にした関数
+		 */
+		own: own,
+
+		_init: function(dataSource, seriesSetting, chartSetting, schema) {
+			
 		this.dataSource = dataSource;
 		this.name = dataSource.name;
 		this.seriesSetting = seriesSetting;
@@ -675,21 +690,7 @@
 
 		// イベントリスナの追加
 		dataSource.addEventListener('dataChange', this.own(this._addEventListener));
-
-		this._init();
-	}
-
-	ChartDataSource.prototype = {
-		/**
-		 * コンテキストを自分自身にした関数を取得します
-		 *
-		 * @memberOf ChartDataSource
-		 * @param {Function} func 関数
-		 * @returns {Function} コンテキストを自分自身にした関数
-		 */
-		own: own,
-
-		_init: function() {},
+	},
 
 		/**
 		 * データを読み込む。系列の設定で指定されている場合はそれを利用します
@@ -980,16 +981,17 @@
 
 	h5.mixin.eventDispatcher.mix(ChartDataSource.prototype);
 
+	function RadarChartDataSource(dataSource, seriesSetting, chartSetting, schema) {
+		this._init(dataSource, seriesSetting, chartSetting, schema);
+		this._radius = calcDefaultRadius(this._chartSetting);
+	}
+
 	/**
 	 * チャート描画用のデータソース
 	 *
 	 * @class RadarChartDataSource
 	 */
 	var radarChartDataSource = {
-		_init: function() {
-			this._radius = calcDefaultRadius(this._chartSetting);
-		},
-
 		/**
 		 * @memberOf RadarChartDataSource
 		 */
@@ -1033,16 +1035,20 @@
 		}
 	};
 
+	RadarChartDataSource.prototype = $.extend({}, ChartDataSource.prototype, radarChartDataSource);
+
+	
+	function ArcChartDataSource(dataSource, seriesSetting, chartSetting, schema) {
+		this._init(dataSource, seriesSetting, chartSetting, schema);
+		this._radius = calcDefaultRadius(this._chartSetting);
+	}
+	
 	/**
 	 * チャート描画用のデータソース
 	 *
 	 * @class ArcChartDataSource
 	 */
 	var arcChartDataSource = {
-		_init: function() {
-			this._radius = calcDefaultRadius(this._chartSetting);
-		},
-
 		/**
 		 * @memberOf ArcChartDataSource
 		 */
@@ -1059,14 +1065,14 @@
 		}
 	};
 
+	ArcChartDataSource.prototype = $.extend({}, RadarChartDataSource.prototype, arcChartDataSource);
+
 	function createChartDataSource(dataSource, seriesSetting, chartSetting, schema) {
 		if (seriesSetting.type === 'radar') {
-			$.extend(ChartDataSource.prototype, radarChartDataSource);
-			return new ChartDataSource(dataSource, seriesSetting, chartSetting, schema);
+			return new RadarChartDataSource(dataSource, seriesSetting, chartSetting, schema);
 		}
 		if (seriesSetting.type === 'arc') {
-			$.extend(ChartDataSource.prototype, radarChartDataSource, arcChartDataSource);
-			return new ChartDataSource(dataSource, seriesSetting, chartSetting, schema);
+			return new ArcChartDataSource(dataSource, seriesSetting, chartSetting, schema);
 		}
 
 		return new ChartDataSource(dataSource, seriesSetting, chartSetting, schema);
