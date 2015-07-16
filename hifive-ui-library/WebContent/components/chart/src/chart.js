@@ -2156,7 +2156,7 @@
 					height: this.chartSetting.get('height'),
 					position: 'absolute'
 				});
-				var fill = this.graphicRenderer.getFill(this.seriesSetting.fillColor,
+				var fill = graphicRenderer.getFill(this.seriesSetting.fillColor,
 						this.rootElement);
 				graphicRenderer.stroke(lineShape, {
 					on: true,
