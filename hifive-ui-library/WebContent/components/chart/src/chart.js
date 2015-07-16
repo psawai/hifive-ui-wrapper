@@ -695,6 +695,7 @@
 	 * @param {DataSource} dataSource データソース
 	 * @param {Object} seriesSetting 系列の設定
 	 * @param {ChartSetting} chartSetting チャート全体の設定
+	 * @param {Object} schema このデータソースのモデルのスキーマ
 	 * @class ChartDataSource
 	 */
 	function ChartDataSource(dataSource, seriesSetting, chartSetting, schema) {
@@ -1163,7 +1164,14 @@
 
 		/**
 		 * チャートレンダラ―の基底クラス
-		 */
+		 * 
+		 * @param {Element} rootElement このラインチャートのルート要素
+		 * @param {DataSource} dataSource このラインチャートのデータソース
+		 * @param {Object} chartSetting 設定
+		 * @param {Object} seriesSetting この種別の設定
+		 * @param {Object} schema 各種別ごとのスキーマ
+		 * @param {Object} prototype 系列ごとに拡張するプロトタイプ
+	 	 */
 		function ChartRendererBase(rootElement, dataSource, chartSetting, seriesSetting, schema) {
 			this.chartDataSource = createChartDataSource(dataSource, seriesSetting, chartSetting,
 					schema);
@@ -1204,7 +1212,7 @@
 			own: own,
 
 			_init: function() {
-
+				// do nothing.
 			},
 
 			_setTooltipSetting: function(tooltip) {
@@ -2012,10 +2020,6 @@
 		}
 	};
 
-	var commonLineChartRenderer = {
-
-	};
-
 	/**
 	 * ラインチャートレンダラ―を生成します。
 	 *
@@ -2111,7 +2115,7 @@
 				}
 
 				var item0 = chartItems[0];
-				var height = this.chartSetting.get('height')
+				var height = this.chartSetting.get('height');
 				var d = 'M' + item0.get('fromX') + ' '
 						+ calcY(item0, 'fromY', preRendererChartModel, height, rate) + ' ';
 				var len = chartItems.length;
@@ -2870,7 +2874,9 @@
 				graphicRenderer.appendPathElm(d, prop, $elm);
 			},
 
-			_chartModelChangeListener: function(ev) {},
+			_chartModelChangeListener: function(ev) {
+				// do nothing
+			},
 
 			_getCentralPos: function(chartItem) {
 				return {
@@ -3073,7 +3079,9 @@
 				}
 			},
 
-			_chartModelChangeListener: function(ev) {},
+			_chartModelChangeListener: function(ev) {
+				// do nothing
+			},
 
 			_getCentralPos: function(chartItem) {
 				return {
@@ -3138,7 +3146,7 @@
 	 *
 	 * @param {Element} axesElm 軸のルート要素
 	 * @param {ChartSettingItem} chartSetting 設定アイテム
-	 * @param {Object} axesSetting 軸の設定オブジェクト
+	 * @param {Object} axesSettings 軸の設定オブジェクト
 	 */
 	function AxisRenderer(axesElm, chartSetting, axesSettings) {
 		this._init(axesElm, chartSetting, axesSettings);
@@ -3478,8 +3486,6 @@
 			return value.toString();
 		}
 	};
-
-	var RADER_AXIS_PATH_FORMAT = '';
 
 	/**
 	 * 軸を描画するレンダラ―
