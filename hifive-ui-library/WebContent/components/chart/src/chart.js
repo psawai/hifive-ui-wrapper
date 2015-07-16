@@ -3405,7 +3405,7 @@
 		this._radius = calcDefaultRadius(chartSetting);
 	}
 	
-	RadarAxisRenderer.protptype = 	$.extend({}, AxisRenderer.prototype, {
+	RadarAxisRenderer.prototype = 	$.extend({}, AxisRenderer.prototype, {
 		_chartSettingChangeListener: function(ev) {
 			if (ev.props.minVal != null || ev.props.maxVal != null) {
 				var minVal = ev.target.get('minVal');
