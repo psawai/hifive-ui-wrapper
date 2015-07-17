@@ -751,9 +751,11 @@
 					this._chartSetting.set('dispDataSize', this.dataSource.length);
 				}
 				
-				this._addEventListener({
-					add: data
-				});
+				if (series.data.manager) {
+					this._addEventListener({
+						add: data
+					});
+				}
 			}));
 		},
 
