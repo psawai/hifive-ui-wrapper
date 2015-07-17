@@ -26,6 +26,8 @@
 		return ret;
 	}
 
+	var dataSourceManager = h5.ui.components.chart.dataSourceManager;
+	
 	/**
 	 * @class
 	 * @memberOF ui.sample.chart
@@ -57,7 +59,7 @@
 		 */
 		_height: 480,
 
-		_series: [],
+		_dataSources: [],
 
 		// チャートライブラリ
 		_chart1Controller: h5.ui.components.chart.ChartController,
@@ -73,6 +75,28 @@
 		},
 
 		__ready: function(context) {
+			this._radarDataSource = dataSourceManager.createDataSource({
+				name: 'radar_series_0'
+			});
+			
+			this._radarDataSource.loadData({
+				data: ui.sample.chart.createChartDummyData(DUMMY_DATA_SIZE, 5, 5)  // ダミーデータを生成
+			}).done(this.own(function() {
+				this._drawRadar(this._radarDataSource);
+			}));
+
+			this._arcDataSource = dataSourceManager.createDataSource({
+				name: 'arc_series_0'
+			});
+			
+			this._arcDataSource.loadData({
+				data: createChartDummyData(10, 5, 5)  // ダミーデータを生成
+			}).done(this.own(function() {
+				this._drawArc(this._arcDataSource);
+			}));	
+		},
+		
+		_drawRadar: function(dataSource) {
 			var color = ui.sample.chart.getRandomColor();
 			this._chart1Controller.draw({
 				chartSetting: {
@@ -98,57 +122,74 @@
 						maxVal: 10
 					}
 				},
+				// 系列データ
 				series: [{
-					name: 'rader_series_0', //系列名(キーとして使用する)
+					name: dataSource.name, //系列名(キーとして使用する)
 					type: 'radar',
-					data: ui.sample.chart.createChartDummyData(DUMMY_DATA_SIZE, 5, 5), // ダミーデータを生成
-					color: color,
-					fillColor: color
-				}]
-			// 系列データ
-			});
-
-			color = ui.sample.chart.getRandomColor();
- 			this._chart2Controller.draw({
- 				chartSetting: {
- 					width: this._width,
- 					height: this._height
- 				},
- 				axes: {
- 					axis: {
- 						interval: 2,
- 						num: DUMMY_DATA_SIZE,
- 						shape: 'circle'
- 					}
- 				},
- 				seriesDefault: { // すべての系列のデフォルト設定
- 					// 表示データ数
- 					mouseover: {
- 						tooltip: {
- 							content: this.own(this._getTooltipContent)
- 						}
- 					},
- 					range: {
- 						minVal: 0,
- 						maxVal: 10
- 					}
- 				},
- 				series: [{
-					name: 'arc_series_0', //系列名(キーとして使用する)
-					type: 'arc',
-					data: createChartDummyData(10, 5, 5), // ダミーデータを生成
+					data: dataSource, 
 					propNames: {
-						radius: 'val'
+						'y': 'val'
 					},
 					color: color,
 					fillColor: color
 				}]
- 			// 系列データ
- 			});
+			});
+		},
+
+		_drawArc: function(dataSource) {
+			var color = ui.sample.chart.getRandomColor();
+			this._chart2Controller.draw({
+				chartSetting: {
+					width: this._width,
+					height: this._height
+				},
+				axes: {
+					axis: {
+						interval: 2,
+						num: DUMMY_DATA_SIZE,
+						shape: 'circle'
+					}
+				},
+				seriesDefault: { // すべての系列のデフォルト設定
+					// 表示データ数
+					mouseover: {
+						tooltip: {
+							content: this.own(this._getTooltipContent)
+						}
+					},
+					range: {
+						minVal: 0,
+						maxVal: 10
+					}
+				},
+				// 系列データ
+				series: [{
+					name: dataSource.name, //系列名(キーとして使用する)
+					type: 'arc',
+					data: dataSource, 
+					propNames: {
+						'radius': 'val'
+					},
+					color: color,
+					fillColor: color
+				}]
+			});
 		},
 
 		_getTooltipContent: function(data) {
 			return data.label + ':' + data.val.toString();
+		},
+		
+		'button click': function() {
+			this._radarDataSource.manager.beginUpdate();
+			this._radarDataSource.removeAll();
+			this._radarDataSource.addAll(ui.sample.chart.createChartDummyData(DUMMY_DATA_SIZE, 5, 5));
+			this._radarDataSource.manager.endUpdate();
+
+			this._arcDataSource.manager.beginUpdate();
+			this._arcDataSource.removeAll();
+			this._arcDataSource.addAll(createChartDummyData(10, 5, 5));
+			this._arcDataSource.manager.endUpdate();
 		}
 	};
 
