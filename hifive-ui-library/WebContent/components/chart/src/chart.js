@@ -15,207 +15,8 @@
  *
  */
 (function($) {
-
-	var LINE_ELM_ID_FORMAT = 'line_{0}';
-	var RECT_ELM_ID_FORMAT = 'rect_{0}_{1}';
-	var PIE_ELM_ID_FORMAT = 'pie_{0}_{1}';
-
-	var VERT_LINE_ELM_ID_FORMAT = 'vert_line_{0}';
-	var X_LABEL_ELM_ID_FORMAT = 'x_label_{0}';
-
-	var TOOLTIP_TIME_FORMAT = '{0}-{1}';
-	var TOOLTIP_OPEN_CLOSE_FORMAT = 'Open/Close= {0}/{1}';
-	var TOOLTIP_HIGH_LOW_FORMAT = 'High/Low= {0}/{1}';
-
-	var PATH_LINE_FORMAT = 'L {0} {1} ';
-
-	var CHARACTER_HEIGHT = 11; // テキスト要素は下に位置を合わせるため、上に位置を合わせるときにこの定数を足す
-
-	/** X軸のラベル領域のデフォルトの高さ */
-	var DEFAULT_X_LABEL_HEIGHT = 32;
-	/** Y軸のラベル領域のデフォルトの幅 */
-	var DEFAULT_Y_LABEL_WIDTH = 120;
-
-	/** Y軸のラベルのマージンのデフォルト */
-	var DEFAULT_Y_LABEL_MARGIN_RIGHT = 5;
-	var DEFAULT_Y_LABEL_MARGIN_LEFT = 0;
-
-	/** X軸のラベルのマージンのデフォルト */
-	var DEFAULT_X_LABEL_MARGIN_TOP = 0;
-	var DEFAULT_X_LABEL_MARGIN_BOTTOM = 0;
-
-	/** チャートのマージンのデフォルト */
-	var DEFAULT_CHART_MARGIN_TOP = 10;
-	var DEFAULT_CHART_MARGIN_BOTTOM = 0;
-	var DEFAULT_CHART_MARGIN_LEFT = 0;
-	var DEFAULT_CHART_MARGIN_RIGHT = 0;
-
-	var TOOLTIP_MARGIN = {
-		TOP: 10,
-		LEFT: 10
-	};
-
-	// ツールチップのpaddingのデフォルト値
-	var DEFAULT_TOOLTIP_PADDING_TOP = 5;
-	var DEFAULT_TOOLTIP_PADDING_BOTTOM = 5;
-	var DEFAULT_TOOLTIP_PADDING_LEFT = 8;
-	var DEFAULT_TOOLTIP_PADDING_RIGHT = 8;
-
-	var DEFAULT_RADIUS_RATE = 0.4;
-
-	var SERIES_PREFIX = '_series';
-
-	var STACKED_CHART_TYPES = ['stacked_line', 'stacked_bar'];
-
-
-	// 変数のインポート
-	var h5format = h5.u.str.format;
-	var requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame
-			|| function(func) {
-				window.setTimeout(func, 15);
-			};
-
-	var graphicRenderer = h5.ui.components.chart.GraphicRenderer;
-
-	var chartDataModelManager = h5.core.data.createManager('ChartDataManager');
-
-	/**
-	 * chartの設定に関するデータアイテム
-	 */
-	var chartSettingsSchema = {
-
-		rangeMin: {
-			type: 'number'
-		},
-		rangeMax: {
-			type: 'number'
-		},
-
-		/**
-		 * y軸の最小値
-		 */
-		minVal: {
-			type: 'number',
-			defaultValue: Infinity
-		},
-		/**
-		 * y軸の最大値
-		 */
-		maxVal: {
-			type: 'number',
-			defaultValue: -Infinity
-		},
-		/**
-		 * candleの中心のx軸方向の間隔
-		 */
-		dx: {
-			depend: {
-				on: ['dispDataSize', 'width'],
-				calc: function() {
-					return this.get('width') / this.get('dispDataSize');
-				}
-			}
-		},
-		dispDataSize: {
-			type: 'integer'
-		},
-		vertLineNum: {
-			type: 'integer'
-		},
-		horizLineNum: {
-			type: 'integer'
-		},
-		keepDataSize: {
-			type: 'integer'
-		},
-
-		movedNum: {
-			type: 'integer',
-			defaultValue: 0
-		},
-
-		/**
-		 * 描画領域の高さ
-		 */
-		height: {
-			type: 'number'
-		},
-		/**
-		 * 描画領域の幅
-		 */
-		width: {
-			type: 'number'
-		},
-
-		translateX: {
-			defalutValue: 0
-		},
-
-		timeInterval: {
-			type: 'integer'
-		},
-		/**
-		 * 補助線の色
-		 */
-		additionalLineColor: {
-			type: 'string'
-		}
-	};
-
-
 	// DataSourceから発生するイベント内で持つ更新情報のプロパティ名
 	var EVENT_PROP_NAMES = ['add', 'remove', 'change', 'removeAll'];
-
-	/**
-	 * グループ内でのY座標の位置を計算します
-	 * 
-	 * @param val 値
-	 * @param rangeMin 領域の最小値
-	 * @param rangeMax 領域の最大値
-	 * @param height Y軸の高さ
-	 * @returns {Number} 値が対応するY座標
-	 */
-	function calcYPos(val, rangeMin, rangeMax, height) {
-		return -(val * 1000 - rangeMin * 1000) / (rangeMax * 1000 - rangeMin * 1000) * height
-				+ height;
-	}
-
-	/**
-	 * ２つの値からグループ内でのY座標の位置の差を計算します
-	 * 
-	 * @param val1 値1
-	 * @param val2 値2
-	 * @param rangeMin 領域の最小値
-	 * @param rangeMax 領域の最大値
-	 * @param height Y軸の高さ
-	 * @returns {Number} Y座標の位置の差
-	 */
-	function calcYDiff(val1, val2, rangeMin, rangeMax, height) {
-		return Math.abs(val1 * 1000 - val2 * 1000) / (rangeMax * 1000 - rangeMin * 1000) * height;
-	}
-
-	function calcDefaultRadius(chartSetting) {
-		return chartSetting.get('height') * DEFAULT_RADIUS_RATE;
-	}
-
-	/**
-	 * 指定したマージンの値を取得します
-	 * 
-	 * @param {Object} obj マージンのプロパティを持つオブジェクト
-	 * @param {String} type margin/paddingのいずれか
-	 * @param {String} prop Top/Bottom/Left/Rightのいずれか
-	 * @returns マージンの値
-	 */
-	function getMarginOrPadding(obj, type, prop) {
-		if (obj == null) {
-			return null;
-		}
-		if (obj[type + prop] != null) {
-			return obj[type + prop];
-		}
-
-		return obj[type] || null;
-	}
 
 	/**
 	 * コンテキストを自分自身にした関数を取得します
@@ -240,10 +41,6 @@
 	function DataSourceManager() {
 		this._count = 0;
 		this._map = {};
-
-		//		for ( var modelName in chartDataModelManager.models) {
-		//			chartDataModelManager.dropModel(modelName);
-		//		}
 
 		this._isInUpdate = false;
 		this._updateLog = {};
@@ -440,10 +237,11 @@
 	function DataSource(name, number, maxSize) {
 		this.name = name;
 		this.number = number;
-		this._maxSize = maxSize;
+		this._maxSize = maxSize || Infinity; // 指定されなかった場合は
 		this.dataMap = {};
 		this.length = 0;
 		this.sequence = 0;
+		this._loadPromise = null; // 初期データロードのプロミス
 	}
 
 	DataSource.prototype = {
@@ -463,6 +261,10 @@
 		 * @memberOf DataSource
 		 */
 		loadData: function(series) {
+			if (this._loadPromise) {
+				return this._loadPromise;
+			}
+			
 			var dfd = $.Deferred();
 
 			if (series.data == null) {
@@ -480,7 +282,9 @@
 				this._initData(series.data);
 				dfd.resolve(this.toArray());
 			}
-			return dfd.promise();
+			
+			this._loadPromise = dfd.promise();
+			return this._loadPromise;
 		},
 
 		_initData: function(data) {
@@ -665,7 +469,227 @@
 	};
 
 	h5.mixin.eventDispatcher.mix(DataSource.prototype);
+	
+	h5.u.obj.expose('h5.ui.components.chart', {
+		dataSourceManager: new DataSourceManager(),
+		createDataSourceManager: function() {
+			return new DataSourceManager();
+		}
+	});
+})(jQuery);
 
+(function($) {
+
+	var LINE_ELM_ID_FORMAT = 'line_{0}';
+	var RECT_ELM_ID_FORMAT = 'rect_{0}_{1}';
+	var PIE_ELM_ID_FORMAT = 'pie_{0}_{1}';
+
+	var VERT_LINE_ELM_ID_FORMAT = 'vert_line_{0}';
+	var X_LABEL_ELM_ID_FORMAT = 'x_label_{0}';
+
+	var TOOLTIP_TIME_FORMAT = '{0}-{1}';
+	var TOOLTIP_OPEN_CLOSE_FORMAT = 'Open/Close= {0}/{1}';
+	var TOOLTIP_HIGH_LOW_FORMAT = 'High/Low= {0}/{1}';
+
+	var PATH_LINE_FORMAT = 'L {0} {1} ';
+
+	var CHARACTER_HEIGHT = 11; // テキスト要素は下に位置を合わせるため、上に位置を合わせるときにこの定数を足す
+
+	/** X軸のラベル領域のデフォルトの高さ */
+	var DEFAULT_X_LABEL_HEIGHT = 32;
+	/** Y軸のラベル領域のデフォルトの幅 */
+	var DEFAULT_Y_LABEL_WIDTH = 120;
+
+	/** Y軸のラベルのマージンのデフォルト */
+	var DEFAULT_Y_LABEL_MARGIN_RIGHT = 5;
+	var DEFAULT_Y_LABEL_MARGIN_LEFT = 0;
+
+	/** X軸のラベルのマージンのデフォルト */
+	var DEFAULT_X_LABEL_MARGIN_TOP = 0;
+	var DEFAULT_X_LABEL_MARGIN_BOTTOM = 0;
+
+	/** チャートのマージンのデフォルト */
+	var DEFAULT_CHART_MARGIN_TOP = 10;
+	var DEFAULT_CHART_MARGIN_BOTTOM = 0;
+	var DEFAULT_CHART_MARGIN_LEFT = 0;
+	var DEFAULT_CHART_MARGIN_RIGHT = 0;
+
+	var TOOLTIP_MARGIN = {
+		TOP: 10,
+		LEFT: 10
+	};
+
+	// ツールチップのpaddingのデフォルト値
+	var DEFAULT_TOOLTIP_PADDING_TOP = 5;
+	var DEFAULT_TOOLTIP_PADDING_BOTTOM = 5;
+	var DEFAULT_TOOLTIP_PADDING_LEFT = 8;
+	var DEFAULT_TOOLTIP_PADDING_RIGHT = 8;
+
+	var DEFAULT_RADIUS_RATE = 0.4;
+
+	var SERIES_PREFIX = '_series';
+
+	var STACKED_CHART_TYPES = ['stacked_line', 'stacked_bar'];
+
+
+	// 変数のインポート
+	var h5format = h5.u.str.format;
+	var requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame
+			|| function(func) {
+				window.setTimeout(func, 15);
+			};
+
+	var graphicRenderer = h5.ui.components.chart.GraphicRenderer;
+
+	var chartDataModelManager = h5.core.data.createManager('ChartDataManager');
+
+	/**
+	 * chartの設定に関するデータアイテム
+	 */
+	var chartSettingsSchema = {
+
+		rangeMin: {
+			type: 'number'
+		},
+		rangeMax: {
+			type: 'number'
+		},
+
+		/**
+		 * y軸の最小値
+		 */
+		minVal: {
+			type: 'number',
+			defaultValue: Infinity
+		},
+		/**
+		 * y軸の最大値
+		 */
+		maxVal: {
+			type: 'number',
+			defaultValue: -Infinity
+		},
+		/**
+		 * candleの中心のx軸方向の間隔
+		 */
+		dx: {
+			depend: {
+				on: ['dispDataSize', 'width'],
+				calc: function() {
+					return this.get('width') / this.get('dispDataSize');
+				}
+			}
+		},
+		dispDataSize: {
+			type: 'integer'
+		},
+		vertLineNum: {
+			type: 'integer'
+		},
+		horizLineNum: {
+			type: 'integer'
+		},
+		keepDataSize: {
+			type: 'integer'
+		},
+
+		movedNum: {
+			type: 'integer',
+			defaultValue: 0
+		},
+
+		/**
+		 * 描画領域の高さ
+		 */
+		height: {
+			type: 'number'
+		},
+		/**
+		 * 描画領域の幅
+		 */
+		width: {
+			type: 'number'
+		},
+
+		translateX: {
+			defalutValue: 0
+		},
+
+		timeInterval: {
+			type: 'integer'
+		},
+		/**
+		 * 補助線の色
+		 */
+		additionalLineColor: {
+			type: 'string'
+		}
+	};
+
+
+	/**
+	 * グループ内でのY座標の位置を計算します
+	 * 
+	 * @param val 値
+	 * @param rangeMin 領域の最小値
+	 * @param rangeMax 領域の最大値
+	 * @param height Y軸の高さ
+	 * @returns {Number} 値が対応するY座標
+	 */
+	function calcYPos(val, rangeMin, rangeMax, height) {
+		return -(val * 1000 - rangeMin * 1000) / (rangeMax * 1000 - rangeMin * 1000) * height
+				+ height;
+	}
+
+	/**
+	 * ２つの値からグループ内でのY座標の位置の差を計算します
+	 * 
+	 * @param val1 値1
+	 * @param val2 値2
+	 * @param rangeMin 領域の最小値
+	 * @param rangeMax 領域の最大値
+	 * @param height Y軸の高さ
+	 * @returns {Number} Y座標の位置の差
+	 */
+	function calcYDiff(val1, val2, rangeMin, rangeMax, height) {
+		return Math.abs(val1 * 1000 - val2 * 1000) / (rangeMax * 1000 - rangeMin * 1000) * height;
+	}
+
+	function calcDefaultRadius(chartSetting) {
+		return chartSetting.get('height') * DEFAULT_RADIUS_RATE;
+	}
+
+	/**
+	 * 指定したマージンの値を取得します
+	 * 
+	 * @param {Object} obj マージンのプロパティを持つオブジェクト
+	 * @param {String} type margin/paddingのいずれか
+	 * @param {String} prop Top/Bottom/Left/Rightのいずれか
+	 * @returns マージンの値
+	 */
+	function getMarginOrPadding(obj, type, prop) {
+		if (obj == null) {
+			return null;
+		}
+		if (obj[type + prop] != null) {
+			return obj[type + prop];
+		}
+
+		return obj[type] || null;
+	}
+
+	/**
+	 * コンテキストを自分自身にした関数を取得します
+	 * 
+	 * @param {Function} func 関数
+	 * @returns コンテキストを自分自身にした関数
+	 */
+	function own(func) {
+		var that = this;
+		return function(/* var_args */) {
+			return func.apply(that, arguments);
+		};
+	}
 
 	var rendererNum = 0;
 
@@ -708,10 +732,10 @@
 				schema: schema
 			});
 
-			rendererNum++;
-
 			// イベントリスナの追加
 			dataSource.addEventListener('dataChange', this.own(this._addEventListener));
+
+			rendererNum++;
 		},
 
 		/**
@@ -722,12 +746,15 @@
 		 */
 		loadData: function(series) {
 			// TODO: ロジック化すべきか？
-			var that = this;
-			this.dataSource.loadData(series).done(function(data) {
-				if (that._chartSetting.get('dispDataSize') == null) {
-					that._chartSetting.set('dispDataSize', that.dataSource.length);
+			return this.dataSource.loadData(series).done(this.own(function(data) {
+				if (this._chartSetting.get('dispDataSize') == null) {
+					this._chartSetting.set('dispDataSize', this.dataSource.length);
 				}
-			});
+				
+				this._addEventListener({
+					add: data
+				});
+			}));
 		},
 
 		/**
@@ -3625,6 +3652,8 @@
 	});
 
 	var chartSequense = 0;
+	
+	var dataSourceManager = h5.ui.components.chart.dataSourceManager;
 
 	/**
 	 * 描画を行うコントローラ
@@ -3644,8 +3673,6 @@
 		_rendererQueue: [],
 
 		axisRenderer: null,
-
-		dataSourceManager: null,
 
 		chartId: null,
 
@@ -3872,8 +3899,6 @@
 		draw: function(settings) {
 			this.isInitDraw = true;
 
-			this.dataSourceManager = new DataSourceManager(this.chartSetting);
-
 			// チャートのパラメータの設定
 			if (settings != null) {
 				this.settings = settings;
@@ -3953,7 +3978,7 @@
 
 			this._renderers = {};
 			this._removeToolTip();
-
+			
 			// TODO: データ生成はイベントをあげるようにして、ここは同期的な書き方にしたほうがよいかもしれない
 			this._createChartRenderes(this.settings).done(this.own(function() {
 				this.isInitDraw = false;
@@ -4164,7 +4189,13 @@
 				} else {
 					this.$seriesGroup.prepend(g);
 				}
-				var dataSource = this.dataSourceManager.createDataSource(seriesSettings);
+				
+				var dataSource;
+				if (seriesSettings.data.manager) {
+					dataSource = seriesSettings.data;
+				} else {
+					dataSource = dataSourceManager.createDataSource(seriesSettings);
+				}
 				var renderer = this._createChartRenderer(g, dataSource, seriesSettings);
 
 				renderer.chartDataSource.addEventListener('dataChange', this
@@ -4207,7 +4238,7 @@
 			var seriesSettings = [];
 			for (var i = 0, len = array.length; i < len; i++) {
 				$(this._renderers[array[i]].rootElement).remove();
-				this.dataSourceManager.removeDataSource(array[i]);
+				dataSourceManager.removeDataSource(array[i]);
 				delete this._renderers[array[i]];
 				for (var j = 0, jLen = this.settings.series.length; j < jLen; j++) {
 					if (this.settings.series[j].name === array[i]) {
