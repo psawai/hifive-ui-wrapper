@@ -1262,7 +1262,7 @@
 			}
 
 			this.chartDataSource.addEventListener('itemsChange', this
-					.own(this._chartModelChangeListener));
+					.own(this._chartDataSourceChangeListener));
 
 			this._leftEndChartItemId = Infinity;
 
@@ -1829,7 +1829,7 @@
 						$parent);
 			},
 
-			_chartModelChangeListener: function(ev) {
+			_chartDataSourceChangeListener: function(ev) {
 				var $root = $(this.rootElement);
 
 				// 表示範囲が広がった時に、左端のidを探す
@@ -2332,7 +2332,7 @@
 				return this.chartDataSource.getXVal(idOrItem);
 			},
 
-			_chartModelChangeListener: function(ev) {
+			_chartDataSourceChangeListener: function(ev) {
 				// 表示範囲が広がった時に、左端のidを探す
 				if (ev.created) {
 					for (var i = 0, len = ev.created.length; i < len; i++) {
@@ -2555,7 +2555,7 @@
 				});
 			},
 
-			_chartModelChangeListener: function(ev) {
+			_chartDataSourceChangeListener: function(ev) {
 				// 表示範囲が広がった時に、左端のidを探す
 				if (ev.created) {
 					for (var i = 0, len = ev.created.length; i < len; i++) {
@@ -2776,7 +2776,7 @@
 				graphicRenderer.appendPathElm(d, prop, $elm);
 			},
 
-			_chartModelChangeListener: function(ev) {
+			_chartDataSourceChangeListener: function(ev) {
 			// do nothing
 			},
 
@@ -2934,7 +2934,7 @@
 				}
 			},
 
-			_chartModelChangeListener: function(ev) {
+			_chartDataSourceChangeListener: function(ev) {
 			// do nothing
 			},
 
