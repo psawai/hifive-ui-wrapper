@@ -2940,8 +2940,8 @@
 
 			_getCentralPos: function(chartItem) {
 				return {
-					x: (chartItem.get('x') + chartItem.get('preX') + this._radian) / 3,
-					y: (chartItem.get('y') + chartItem.get('preY') + this._radian) / 3
+					x: (chartItem.x + chartItem.preX + this._radian) / 3,
+					y: (chartItem.y + chartItem.preY + this._radian) / 3
 				};
 			},
 
