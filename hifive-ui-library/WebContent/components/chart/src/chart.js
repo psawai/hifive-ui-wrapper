@@ -2186,13 +2186,13 @@
 					lineShapePath += h5format(',{0},{1}', x2, y2);
 				}
 				if (fill) {
-					var firstX = parseInt(this.chartDataSource.get(start).get.fromX);
-					var lastX = parseInt(this.chartDataSource.get(current - 1).get.toX);
+					var firstX = parseInt(this.chartDataSource.get(fromId).fromX);
+					var lastX = parseInt(this.chartDataSource.get(toId - 1).toX);
 					var height = this.chartSetting.get('height');
 					lineShapePath += h5format(',{0},{1}', lastX, height);
 					lineShapePath += h5format(',{0},{1}', firstX, height);
 					lineShapePath += h5format(',{0},{1}', firstX, parseInt(this.chartDataSource
-							.get(start).fromY));
+							.get(fromId).fromY));
 				}
 				lineShape.path = lineShapePath + 'e';
 				$root[0].appendChild(lineShape);
