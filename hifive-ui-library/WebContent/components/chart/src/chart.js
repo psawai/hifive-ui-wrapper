@@ -264,7 +264,7 @@
 			if (this._loadPromise) {
 				return this._loadPromise;
 			}
-			
+
 			var dfd = $.Deferred();
 
 			if (series.data == null) {
@@ -282,7 +282,7 @@
 				this._initData(series.data);
 				dfd.resolve(this.toArray());
 			}
-			
+
 			this._loadPromise = dfd.promise();
 			return this._loadPromise;
 		},
@@ -469,7 +469,7 @@
 	};
 
 	h5.mixin.eventDispatcher.mix(DataSource.prototype);
-	
+
 	h5.u.obj.expose('h5.ui.components.chart', {
 		dataSourceManager: new DataSourceManager(),
 		createDataSourceManager: function() {
@@ -540,8 +540,6 @@
 			};
 
 	var graphicRenderer = h5.ui.components.chart.GraphicRenderer;
-
-	var chartDataModelManager = h5.core.data.createManager('ChartDataManager');
 
 	/**
 	 * chartの設定に関するデータアイテム
@@ -699,11 +697,10 @@
 	 * @param {DataSource} dataSource データソース
 	 * @param {Object} seriesSetting 系列の設定
 	 * @param {ChartSetting} chartSetting チャート全体の設定
-	 * @param {Object} schema このデータソースのモデルのスキーマ
 	 * @class ChartDataSource
 	 */
-	function ChartDataSource(dataSource, seriesSetting, chartSetting, schema) {
-		this._init(dataSource, seriesSetting, chartSetting, schema);
+	function ChartDataSource(dataSource, seriesSetting, chartSetting) {
+		this._init(dataSource, seriesSetting, chartSetting);
 	}
 
 	ChartDataSource.prototype = {
@@ -716,7 +713,7 @@
 		 */
 		own: own,
 
-		_init: function(dataSource, seriesSetting, chartSetting, schema) {
+		_init: function(dataSource, seriesSetting, chartSetting) {
 
 			this.dataSource = dataSource;
 			this.name = dataSource.name;
@@ -727,10 +724,11 @@
 
 			this.setPropNames(seriesSetting.type, seriesSetting.propNames);
 
-			this.chartModel = chartDataModelManager.createModel({
-				name: 'chartModel_' + rendererNum + '_' + this.name,
-				schema: schema
-			});
+			this._map = [];
+			this.length = 0;
+			this.fromId = null;
+			this.toId = null;
+
 
 			// イベントリスナの追加
 			dataSource.addEventListener('dataChange', this.own(this._addEventListener));
@@ -750,7 +748,7 @@
 				if (this._chartSetting.get('dispDataSize') == null) {
 					this._chartSetting.set('dispDataSize', this.dataSource.length);
 				}
-				
+
 				if (series.data.manager) {
 					this._addEventListener({
 						add: data
@@ -841,7 +839,7 @@
 		 * @memberOf ChartDataSource
 		 */
 		get: function(id) {
-			return this.chartModel.get(id);
+			return this._map[id];
 		},
 
 		/**
@@ -851,17 +849,7 @@
 		 * @memberOf ChartDataSource
 		 */
 		getItems: function() {
-			return this.chartModel.items;
-		},
-
-		/**
-		 * すべてのアイテムの配列を取得します
-		 * 
-		 * @return {Object} すべてのアイテムの配列
-		 * @memberOf ChartDataSource
-		 */
-		toArray: function() {
-			return this.chartModel.toArray();
+			return this._map;
 		},
 
 		/**
@@ -871,8 +859,32 @@
 		 * @return {ChartItem|ChartItem[]} チャートデータアイテムまたはその配列
 		 * @memberOf ChartDataSource
 		 */
-		create: function(obj) {
-			return this.chartModel.create(obj);
+		create: function(objOrArray) {
+			var arr = objOrArray;
+			var isArray = $.isArray(objOrArray);
+			if (!isArray) {
+				// 配列でないとき
+				arr = [objOrArray];
+			}
+
+			for (var i = 0, len = arr.length; i < len; i++) {
+				var data = arr[i];
+				this._map[data.id] = data;
+
+				this.length++;
+				if (this.fromId == null || data.id < this.fromId) {
+					this.fromId = data.id;
+				} else if (this.toId == null || data.id > this.toId) {
+					this.toId = data.id;
+				}
+			}
+
+			this.dispatchEvent({
+				type: 'itemsChange',
+				created: arr,
+				target: this
+			});
+			return isArray ? arr : arr[0];
 		},
 
 		/**
@@ -882,14 +894,23 @@
 		 * @memberOf ChartDataSource
 		 */
 		remove: function(id) {
-			if (this.chartModel.get(id)) {
-				this.dispatchEvent({
-					type: 'dataChange',
-					remove: [this.getDataObj(id)],
-					target: this
-				});
-				this.chartModel.remove(id);
+			if (!this._map[id]) {
+				return;
 			}
+
+			delete this._map[id];
+			this.length--;
+			if (id === this.fromId) {
+				this.fromId = id + 1;
+			} else if (id === this.toId) {
+				this.toId = id - 1;
+			}
+
+			this.dispatchEvent({
+				type: 'dataChange',
+				remove: [this.getDataObj(id)],
+				target: this
+			});
 		},
 
 		/**
@@ -899,7 +920,48 @@
 		 * @memberOf ChartDataSource
 		 */
 		removeAll: function() {
-			this.chartModel.removeAll();
+			this._map = {};
+			this.length = 0;
+			this.fromId = null;
+			this.toId = null;
+		},
+
+		update: function(updates) {
+			var changed = [];
+			for (var i = 0, len = updates.length; i < len; i++) {
+				var data = updates[i];
+				var obj = this.get(data.id);
+
+				if (!obj) {
+					return;
+				}
+
+				var props = {};
+				for ( var name in data) {
+					var newValue = data[name];
+					var oldValue = obj[name];
+					if (newValue === oldValue) {
+						continue;
+					}
+
+					props[name] = {
+						oldValue: oldValue,
+						newValue: newValue
+					};
+					obj[name] = data[name];
+				}
+				changed.push({
+					props: props,
+					target: obj
+				});
+			}
+
+
+			this.dispatchEvent({
+				type: 'itemsChange',
+				changed: changed,
+				target: this
+			});
 		},
 
 		_calcDataObj: function(data, prop) {
@@ -1034,8 +1096,8 @@
 
 	h5.mixin.eventDispatcher.mix(ChartDataSource.prototype);
 
-	function RadarChartDataSource(dataSource, seriesSetting, chartSetting, schema) {
-		this._init(dataSource, seriesSetting, chartSetting, schema);
+	function RadarChartDataSource(dataSource, seriesSetting, chartSetting) {
+		this._init(dataSource, seriesSetting, chartSetting);
 		this._radius = calcDefaultRadius(this._chartSetting);
 	}
 
@@ -1077,13 +1139,17 @@
 
 			var center = chartSetting.get('height') * 0.5;
 
+
+			var radius = value * this._radius
+					/ (chartSetting.get('rangeMax') - chartSetting.get('rangeMin'));
+			var radian = 2 * Math.PI * (id - 1) / chartSetting.get('dispDataSize');
+
 			return {
 				id: id,
 				centerX: center,
 				centerY: center,
-				radius: value * this._radius
-						/ (chartSetting.get('rangeMax') - chartSetting.get('rangeMin')),
-				radian: 2 * Math.PI * (id - 1) / chartSetting.get('dispDataSize')
+				x: center + radius * Math.sin(radian),
+				y: center - radius * Math.cos(radian)
 			};
 		}
 	};
@@ -1091,8 +1157,8 @@
 	RadarChartDataSource.prototype = $.extend({}, ChartDataSource.prototype, radarChartDataSource);
 
 
-	function ArcChartDataSource(dataSource, seriesSetting, chartSetting, schema) {
-		this._init(dataSource, seriesSetting, chartSetting, schema);
+	function ArcChartDataSource(dataSource, seriesSetting, chartSetting) {
+		this._init(dataSource, seriesSetting, chartSetting);
 		this._radius = calcDefaultRadius(this._chartSetting);
 	}
 
@@ -1108,28 +1174,31 @@
 		toData: function(dataObj) {
 			var center = this._chartSetting.get('height') * 0.5;
 
+			var radius = this._radius * dataObj[this.propNames.radius]
+					/ this._chartSetting.get('maxVal');
+			var radian = dataObj[this.propNames.radian];
+
 			return {
 				id: dataObj.id,
 				centerX: center,
 				centerY: center,
-				radius: this._radius * dataObj[this.propNames.radius]
-						/ this._chartSetting.get('maxVal'),
-				radian: dataObj[this.propNames.radian]
+				x: center + radius * Math.sin(radian),
+				y: center - radius * Math.cos(radian)
 			};
 		}
 	};
 
 	ArcChartDataSource.prototype = $.extend({}, RadarChartDataSource.prototype, arcChartDataSource);
 
-	function createChartDataSource(dataSource, seriesSetting, chartSetting, schema) {
+	function createChartDataSource(dataSource, seriesSetting, chartSetting) {
 		if (seriesSetting.type === 'radar') {
-			return new RadarChartDataSource(dataSource, seriesSetting, chartSetting, schema);
+			return new RadarChartDataSource(dataSource, seriesSetting, chartSetting);
 		}
 		if (seriesSetting.type === 'arc') {
-			return new ArcChartDataSource(dataSource, seriesSetting, chartSetting, schema);
+			return new ArcChartDataSource(dataSource, seriesSetting, chartSetting);
 		}
 
-		return new ChartDataSource(dataSource, seriesSetting, chartSetting, schema);
+		return new ChartDataSource(dataSource, seriesSetting, chartSetting);
 	}
 
 	// チャートレンダラ―の定義
@@ -1141,19 +1210,19 @@
 		return time + '<br>' + open_close + '<br>' + high_low;
 	}
 
-	function calcY(item, prop, preRendererChartModel, height, rate) {
+	function calcY(item, prop, preChartDataSource, height, rate) {
 		if (rate == null) {
 			rate = 1;
 		}
 
 		var preY;
-		if (!preRendererChartModel) {
+		if (!preChartDataSource) {
 			preY = height;
 		} else {
-			preY = preRendererChartModel.get(item.get('id')).get(prop);
+			preY = preChartDataSource.get(item.id)[prop];
 		}
 
-		return (1 - rate) * preY + rate * item.get(prop);
+		return (1 - rate) * preY + rate * item[prop];
 	}
 
 
@@ -1165,12 +1234,10 @@
 	 * @param {DataSource} dataSource このラインチャートのデータソース
 	 * @param {Object} chartSetting 設定
 	 * @param {Object} seriesSetting この種別の設定
-	 * @param {Object} schema 各種別ごとのスキーマ
 	 * @param {Object} prototype 系列ごとに拡張するプロトタイプ
 	 * @returns {ChartRenderer}
 	 */
-	function createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, schema,
-			prototype) {
+	function createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, prototype) {
 
 		/**
 		 * チャートレンダラ―の基底クラス
@@ -1179,12 +1246,10 @@
 		 * @param {DataSource} dataSource このラインチャートのデータソース
 		 * @param {Object} chartSetting 設定
 		 * @param {Object} seriesSetting この種別の設定
-		 * @param {Object} schema 各種別ごとのスキーマ
 		 * @param {Object} prototype 系列ごとに拡張するプロトタイプ
 		 */
-		function ChartRendererBase(rootElement, dataSource, chartSetting, seriesSetting, schema) {
-			this.chartDataSource = createChartDataSource(dataSource, seriesSetting, chartSetting,
-					schema);
+		function ChartRendererBase(rootElement, dataSource, chartSetting, seriesSetting) {
+			this.chartDataSource = createChartDataSource(dataSource, seriesSetting, chartSetting);
 			this.name = this.chartDataSource.name;
 			this.chartSetting = chartSetting;
 			this.rootElement = rootElement;
@@ -1196,7 +1261,7 @@
 						+ this.chartSetting.get('height');
 			}
 
-			this.chartDataSource.chartModel.addEventListener('itemsChange', this
+			this.chartDataSource.addEventListener('itemsChange', this
 					.own(this._chartModelChangeListener));
 
 			this._leftEndChartItemId = Infinity;
@@ -1336,7 +1401,7 @@
 			 * @memberOf ChartRendererBase
 			 */
 			updateYVal: function() {
-				chartDataModelManager.beginUpdate();
+				var updates = [];
 				for ( var id in this.chartDataSource.getItems()) {
 					var intId = parseInt(id);
 					// 描画範囲のローソクは座標情報を計算する
@@ -1344,13 +1409,9 @@
 					if (!obj) {
 						continue;
 					}
-
-					var chartItem = this.chartDataSource.get(obj.id);
-					if (chartItem != null) {
-						chartItem.set(this.toData(obj, id));
-					}
+					updates.push(this.toData(obj, this.chartSetting.get()));
 				}
-				chartDataModelManager.endUpdate();
+				this.chartDataSource.update(updates);
 			},
 
 			_removeChartElm: function(id) {
@@ -1394,12 +1455,12 @@
 				var oy = ev.offsetY;
 				var ox = ev.offsetX;
 
-				var items = this.chartDataSource.toArray();
-				for (var i = items.length - 1; 0 <= i; i--) {
-					var r = this._getRectPos(items[i]);
+				for (var i = this.chartDataSource.toId - 1; this.chartDataSource.fromId <= i; i--) {
+					var item = this.chartDataSource.get(i);
+					var r = this._getRectPos(item);
 					if (r.sx - left <= ox && ox <= r.ex - left && r.sy - top - 1 <= oy
 							&& oy <= r.ey - top + 1) {
-						return items[i].get('id');
+						return item.id;
 					}
 				}
 			},
@@ -1574,71 +1635,8 @@
 		};
 
 		$.extend(ChartRendererBase.prototype, prototype);
-		return new ChartRendererBase(rootElement, dataSource, chartSetting, seriesSetting, schema);
+		return new ChartRendererBase(rootElement, dataSource, chartSetting, seriesSetting);
 	}
-
-	/**
-	 * ローソク表示用データを保持するモデル
-	 * 
-	 * @name chartModel
-	 */
-	var candleStickSchema = {
-		id: {
-			id: true,
-			type: 'integer'
-		},
-		rectX: {
-			type: 'number',
-			depend: {
-				on: ['rectWidth', 'lineX'],
-				calc: function() {
-					return this.get('lineX') - this.get('rectWidth') / 2;
-				}
-			}
-		},
-		rectY: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		rectWidth: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		rectHeight: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		fill: {
-			type: 'string'
-		},
-		lineX: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		lineY1: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		lineY2: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		time: {
-			type: 'string'
-		}
-	};
 
 	/**
 	 * ローソクチャートレンダラ―を生成します。
@@ -1658,8 +1656,8 @@
 
 			_getCentralPos: function(chartItem) {
 				return {
-					x: chartItem.get('rectX') + (chartItem.get('rectWidth') / 2),
-					y: chartItem.get('rectY') + (chartItem.get('rectHeight') / 2)
+					x: chartItem.rectX + (chartItem.rectWidth / 2),
+					y: chartItem.rectY + (chartItem.rectHeight / 2)
 				};
 			},
 
@@ -1672,12 +1670,12 @@
 
 				var candleStickData = [];
 				var current = this.chartDataSource.dataSource.sequence.current();
+				var chartSetting = this.chartSetting.get();
 				for ( var id in this.chartDataSource.dataSource.dataMap) {
-					if (id >= current - this.chartSetting.get('dispDataSize')) {
+					if (id >= current - chartSetting.dispDataSize) {
 						// 描画範囲のローソクは座標情報を計算する
 						var obj = this.chartDataSource.getDataObj(id);
-						//						var obj = this.dataSource.dataModel.dataMap[id];
-						var data = this.toData(obj);
+						var data = this.toData(obj, chartSetting);
 						candleStickData.push(data);
 					}
 				}
@@ -1692,7 +1690,7 @@
 			 * @memberOf CandleStickRenderer
 			 */
 			createChartDataItem: function(data) {
-				return this.chartDataSource.create(this.toData(data));
+				return this.chartDataSource.create(this.toData(data, this.chartSetting.get()));
 			},
 
 			/**
@@ -1702,27 +1700,33 @@
 			 * @returns {Object} 描画用のオブジェクト
 			 * @memberOf CandleStickChartRenderer
 			 */
-			toData: function(data) {
+			toData: function(data, chartSetting) {
 				var id = data.id;
 				var open = data.open;
 				var close = data.close;
 				var time = data[this.chartDataSource.xProp];
 
-				return $.extend(this._calcCandleYValues(data), {
+				var dx = chartSetting.dx;
+				var lineX = id * dx + chartSetting.width;
+
+				var rectWidth = dx * 0.8;
+
+				return $.extend(this._calcCandleYValues(data, chartSetting), {
 					id: id,
-					rectWidth: this.chartSetting.get('dx') * 0.8,
+					rectWidth: rectWidth,
+					rectX: lineX - rectWidth / 2,
 					fill: open > close ? 'blue' : open === close ? 'black' : 'red',
-					lineX: id * this.chartSetting.get('dx') + this.chartSetting.get('width'),
+					lineX: lineX,
 					time: time
 				});
 			},
 
-			_calcCandleYValues: function(data) {
+			_calcCandleYValues: function(data, chartSetting) {
 				var open = data.open;
 				var close = data.close;
-				var min = this.chartSetting.get('rangeMin');
-				var max = this.chartSetting.get('rangeMax');
-				var height = this.chartSetting.get('height');
+				var min = chartSetting.rangeMin;
+				var max = chartSetting.rangeMax;
+				var height = chartSetting.height;
 
 				return {
 					rectY: calcYPos(Math.max(open, close), min, max, height),
@@ -1748,9 +1752,9 @@
 			},
 
 			_showSVGCandleSticks: function() {
-				var candleSticks = this.chartDataSource.toArray();
-				for (var i = 0, len = candleSticks.length; i < len; i++) {
-					this._appendCandleStick(candleSticks[i], this.rootElement);
+				var candleSticks = this.chartDataSource.getItems();
+				for ( var id in candleSticks) {
+					this._appendCandleStick(candleSticks[id], this.rootElement);
 				}
 			},
 
@@ -1766,10 +1770,10 @@
 				var $parent = $(parent);
 
 				this._appendCandleStickInner(candleStickItem, $parent, '#000', {
-					id: h5format(LINE_ELM_ID_FORMAT, candleStickItem.get('id')),
+					id: h5format(LINE_ELM_ID_FORMAT, candleStickItem.id),
 					'class': 'candleStickChart chartElm'
-				}, candleStickItem.get('fill'), {
-					id: h5format(RECT_ELM_ID_FORMAT, candleStickItem.get('id'), this.name),
+				}, candleStickItem.fill, {
+					id: h5format(RECT_ELM_ID_FORMAT, candleStickItem.id, this.name),
 					'class': 'candleStickChart chartElm'
 				});
 			},
@@ -1779,7 +1783,7 @@
 					this._appendCandleStickInner(candleStickItem, $tooltip, 'yellow', {
 						'class': 'highlight_candle',
 						'stroke-width': '1px'
-					}, candleStickItem.get('fill'), {
+					}, candleStickItem.fill, {
 						'class': 'highlight_candle',
 						stroke: 'yellow',
 						'stroke-width': '2px'
@@ -1799,7 +1803,7 @@
 
 					// 塗りつぶし
 					graphicRenderer.fill(highlightShape, {
-						color: candleStickItem.get('fill')
+						color: candleStickItem.fill
 					});
 
 					// 枠線
@@ -1815,45 +1819,51 @@
 
 			_appendCandleStickInner: function(candleStickItem, $parent, lineColor, lineProp,
 					rectColor, rectProp) {
-				graphicRenderer.appendLineElm(candleStickItem.get('lineX'), candleStickItem
-						.get('lineY1'), candleStickItem.get('lineX'),
-						candleStickItem.get('lineY2'), lineColor, lineProp, $parent);
+				graphicRenderer
+						.appendLineElm(candleStickItem.lineX, candleStickItem.lineY1,
+								candleStickItem.lineX, candleStickItem.lineY2, lineColor, lineProp,
+								$parent);
 
-				graphicRenderer.appendRectElm(candleStickItem.get('rectX'), candleStickItem
-						.get('rectY'), candleStickItem.get('rectWidth'), candleStickItem
-						.get('rectHeight'), rectColor, rectProp, $parent);
+				graphicRenderer.appendRectElm(candleStickItem.rectX, candleStickItem.rectY,
+						candleStickItem.rectWidth, candleStickItem.rectHeight, rectColor, rectProp,
+						$parent);
 			},
 
 			_chartModelChangeListener: function(ev) {
 				var $root = $(this.rootElement);
 
 				// 表示範囲が広がった時に、左端のidを探す
-				for (var i = 0, len = ev.created.length; i < len; i++) {
-					if (ev.created[i].get('id') < this._leftEndChartItemId) {
-						this._leftEndChartItemId = ev.created[i].get('id');
+				if (ev.created) {
+					for (var i = 0, len = ev.created.length; i < len; i++) {
+						if (ev.created[i].id < this._leftEndChartItemId) {
+							this._leftEndChartItemId = ev.created[i].id;
+						}
 					}
 				}
 
-				// 座標情報が変更されたときに、表示に反映する
-				for (var i = 0, len = ev.changed.length; i < len; i++) {
-					var changed = ev.changed[i];
-					if (changed.props.rectY == null && changed.props.rectHeight == null
-							&& changed.props.lineY1 == null && changed.props.lineY2 == null) {
-						return;
-					}
 
-					var item = changed.target;
-					var $line = $root.find('#' + h5format(LINE_ELM_ID_FORMAT, item.get('id')));
-					$line.attr({
-						y1: item.get('lineY1'),
-						y2: item.get('lineY2')
-					});
-					var $rect = $root.find('#'
-							+ h5format(RECT_ELM_ID_FORMAT, item.get('id'), this.name));
-					$rect.attr({
-						y: item.get('rectY'),
-						height: item.get('rectHeight')
-					});
+				// 座標情報が変更されたときに、表示に反映する
+				if (ev.changed) {
+					for (var i = 0, len = ev.changed.length; i < len; i++) {
+						var changed = ev.changed[i];
+						if (changed.props.rectY == null && changed.props.rectHeight == null
+								&& changed.props.lineY1 == null && changed.props.lineY2 == null) {
+							return;
+						}
+
+						var item = changed.target;
+						var $line = $root.find('#' + h5format(LINE_ELM_ID_FORMAT, item.id));
+						$line.attr({
+							y1: item.lineY1,
+							y2: item.lineY2
+						});
+						var $rect = $root.find('#'
+								+ h5format(RECT_ELM_ID_FORMAT, item.id, this.name));
+						$rect.attr({
+							y: item.rectY,
+							height: item.rectHeight
+						});
+					}
 				}
 			},
 
@@ -1962,73 +1972,42 @@
 			},
 
 			_getRectType: function(data) {
-				return data.get('fill');
+				return data.fill;
 			},
 
 
 			_dataToRect: function(data) {
 				return {
-					id: data.get('id'),
-					left: data.get('rectX'),
-					top: data.get('rectY'),
-					width: data.get('rectWidth'),
-					height: data.get('rectHeight'),
-					fill: data.get('fill')
+					id: data.id,
+					left: data.rectX,
+					top: data.rectY,
+					width: data.rectWidth,
+					height: data.rectHeight,
+					fill: data.fill
 				};
 			},
 
 			_linePath: function(line) {
-				var x = parseInt(line.get('lineX'));
-				var y1 = parseInt(line.get('lineY1'));
-				var y2 = parseInt(line.get('lineY2'));
+				var x = parseInt(line.lineX);
+				var y1 = parseInt(line.lineY1);
+				var y2 = parseInt(line.lineY2);
 
 				return h5format('m {0} {1} l {0} {2} e', x, y1, y2);
 			},
 
 			_getRectPos: function(item) {
 				return {
-					sx: parseInt(item.get('rectX')),
-					sy: parseInt(item.get('rectY')),
-					ex: parseInt(item.get('rectX') + item.get('rectWidth')),
-					ey: parseInt(item.get('rectY') + item.get('rectHeight'))
+					sx: parseInt(item.rectX),
+					sy: parseInt(item.rectY),
+					ex: parseInt(item.rectX + item.rectWidth),
+					ey: parseInt(item.rectY + item.rectHeight)
 				};
 			}
 		};
 
 		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting,
-				candleStickSchema, CandleStickChartRenderer);
+				CandleStickChartRenderer);
 	}
-
-	var lineSchema = {
-		id: {
-			id: true,
-			type: 'integer'
-		},
-		fromX: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		toX: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		fromY: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		toY: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		}
-	};
 
 	/**
 	 * ラインチャートレンダラ―を生成します。
@@ -2053,8 +2032,8 @@
 			 */
 			_getCentralPos: function(chartItem) {
 				return {
-					x: chartItem.get('toX'),
-					y: chartItem.get('toY')
+					x: chartItem.toX,
+					y: chartItem.toY
 				};
 			},
 
@@ -2072,14 +2051,14 @@
 			 * この系列の描画をされます
 			 * 
 			 * @param {Boolean} animate アニメーションするか
-			 * @param {ChartModel} preRendererChartModel この系列より１つ前の系列のChartModel
+			 * @param {ChartDataSource} preChartDataSource この系列より１つ前の系列のChartDataSource
 			 * @memberOf LineChartRenderer
 			 */
-			draw: function(animate, preRendererChartModel) {
+			draw: function(animate, preChartDataSource) {
 				$(this.rootElement).empty();
 				this.$path = null;
 
-				this._createLineDataItems(preRendererChartModel);
+				this._createLineDataItems(preChartDataSource);
 
 				var count = 0;
 				var animateNum = this.seriesSetting.animateNum;
@@ -2090,8 +2069,7 @@
 
 				var that = this;
 				function doAnimation() {
-					that._appendLines(that.chartDataSource.toArray(), preRendererChartModel, count
-							/ animateNum);
+					that._appendLines(preChartDataSource, count / animateNum);
 					count++;
 					if (count <= animateNum) {
 						requestAnimationFrame(doAnimation);
@@ -2104,40 +2082,43 @@
 			},
 
 			_redraw: function() {
-				this._appendLines(this.chartDataSource.toArray());
+				this._appendLines();
 			},
 
 			_appendChart: function(elms) {
 				this._appendLines();
 			},
 
-			_appendLines: function(lines, preRendererChartModel, rate) {
-				graphicRenderer.isSvg ? this._appendLinesForSvg(lines, preRendererChartModel, rate)
-						: this._appendLinesForVml();
+			_appendLines: function(preChartDataSource, rate) {
+				graphicRenderer.isSvg ? this._appendLinesForSvg(preChartDataSource, rate) : this
+						._appendLinesForVml();
 			},
 
-			_appendLinesForSvg: function(lines, preRendererChartModel, rate) {
+			_appendLinesForSvg: function(preChartDataSource, rate) {
 				var $root = $(this.rootElement);
-				var chartItems = lines || this.chartDataSource.toArray();
 
-				if (!chartItems || !chartItems.length) {
+				if (!this.chartDataSource.length) {
 					return;
 				}
 
-				var item0 = chartItems[0];
+				var chartItems = this.chartDataSource.getItems();
+
+				var fromId = this.chartDataSource.fromId;
+				var toId = this.chartDataSource.toId;
+
+				var item0 = chartItems[fromId];
 				var height = this.chartSetting.get('height');
-				var d = 'M' + item0.get('fromX') + ' '
-						+ calcY(item0, 'fromY', preRendererChartModel, height, rate) + ' ';
-				var len = chartItems.length;
-				for (var i = 0; i < len; i++) {
-					d += h5format(PATH_LINE_FORMAT, chartItems[i].get('toX'), calcY(chartItems[i],
-							'toY', preRendererChartModel, height, rate));
+				var d = 'M' + item0.fromX + ' '
+						+ calcY(item0, 'fromY', preChartDataSource, height, rate) + ' ';
+				for (var i = fromId; i <= toId; i++) {
+					d += h5format(PATH_LINE_FORMAT, chartItems[i].toX, calcY(chartItems[i], 'toY',
+							preChartDataSource, height, rate));
 				}
 				var fill = graphicRenderer.getFill(this.seriesSetting.fillColor, this.rootElement);
 				if (fill != null) {
-					d += h5format(PATH_LINE_FORMAT, chartItems[len - 1].get('toX'),
-							this.chartSetting.get('height'))
-							+ h5format(PATH_LINE_FORMAT, item0.get('fromX'), this.chartSetting
+					d += h5format(PATH_LINE_FORMAT, chartItems[toId - 1].toX, this.chartSetting
+							.get('height'))
+							+ h5format(PATH_LINE_FORMAT, item0.fromX, this.chartSetting
 									.get('height')) + ' Z';
 				}
 
@@ -2163,6 +2144,10 @@
 				var $root = $(this.rootElement);
 				$root.empty();
 
+				if (!this.chartDataSource.length) {
+					return;
+				}
+
 				var lineShape = graphicRenderer.createShapeElm();
 				graphicRenderer.css(lineShape, {
 					width: this.chartSetting.get('width'),
@@ -2186,29 +2171,28 @@
 
 				var lineShapePath = '';
 
-				var current = this.chartDataSource.dataSource.sequence.current()
-						- chartSetting.get('movedNum');
-				var start = Math.max(1, current - this.chartSetting.get('dispDataSize'));
-				for (var i = start; i < current; i++) {
+				var fromId = this.chartDataSource.fromId;
+				var toId = this.chartDataSource.toId;
+				for (var i = fromId; i <= toId; i++) {
 					var lineData = this.chartDataSource.get(i);
-					if (i === start) {
-						var x1 = parseInt(lineData.get('fromX'));
-						var y1 = parseInt(lineData.get('fromY'));
+					if (i === fromId) {
+						var x1 = parseInt(lineData.fromX);
+						var y1 = parseInt(lineData.fromY);
 						lineShapePath += h5format('m {0},{1} l{0}, {1}', x1, y1);
 					}
-					var x2 = parseInt(lineData.get('toX'));
-					var y2 = parseInt(lineData.get('toY'));
+					var x2 = parseInt(lineData.toX);
+					var y2 = parseInt(lineData.toY);
 
 					lineShapePath += h5format(',{0},{1}', x2, y2);
 				}
 				if (fill) {
-					var firstX = parseInt(this.chartDataSource.get(start).get('fromX'));
-					var lastX = parseInt(this.chartDataSource.get(current - 1).get('toX'));
+					var firstX = parseInt(this.chartDataSource.get(start).get.fromX);
+					var lastX = parseInt(this.chartDataSource.get(current - 1).get.toX);
 					var height = this.chartSetting.get('height');
 					lineShapePath += h5format(',{0},{1}', lastX, height);
 					lineShapePath += h5format(',{0},{1}', firstX, height);
 					lineShapePath += h5format(',{0},{1}', firstX, parseInt(this.chartDataSource
-							.get(start).get('fromY')));
+							.get(start).fromY));
 				}
 				lineShape.path = lineShapePath + 'e';
 				$root[0].appendChild(lineShape);
@@ -2246,7 +2230,7 @@
 				return this.chartDataSource.create(chartData);
 			},
 
-			_createLineDataItems: function(preRendererChartModel) {
+			_createLineDataItems: function(preChartDataSource) {
 				this.chartDataSource.removeAll();
 
 				if (!this.chartDataSource) {
@@ -2350,14 +2334,16 @@
 
 			_chartModelChangeListener: function(ev) {
 				// 表示範囲が広がった時に、左端のidを探す
-				for (var i = 0, len = ev.created.length; i < len; i++) {
-					if (ev.created[i].get('id') < this._leftEndChartItemId) {
-						this._leftEndChartItemId = ev.created[i].get('id');
+				if (ev.created) {
+					for (var i = 0, len = ev.created.length; i < len; i++) {
+						if (ev.created[i].id < this._leftEndChartItemId) {
+							this._leftEndChartItemId = ev.created[i].id;
+						}
 					}
 				}
 
 				// // 座標情報が変更されたときに、表示に反映する
-				if (ev.changed.length > 0) {
+				if (ev.changed && ev.changed.length > 0) {
 					this._appendLines();
 				}
 			},
@@ -2368,20 +2354,20 @@
 				var ex = 0;
 				var ey = 0;
 
-				if (item.get('fromX') < item.get('toX')) {
-					sx = item.get('fromX');
-					ex = item.get('toX');
+				if (item.fromX < item.toX) {
+					sx = item.fromX;
+					ex = item.toX;
 				} else {
-					sx = item.get('toX');
-					ex = item.get('fromX');
+					sx = item.toX;
+					ex = item.fromX;
 				}
 
-				if (item.get('fromY') < item.get('toY')) {
-					sy = item.get('fromY');
-					ey = item.get('toY');
+				if (item.fromY < item.toY) {
+					sy = item.fromY;
+					ey = item.toY;
 				} else {
-					sy = item.get('toY');
-					ey = item.get('fromY');
+					sy = item.toY;
+					ey = item.fromY;
 				}
 
 				return {
@@ -2407,33 +2393,8 @@
 			}
 		};
 		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting,
-				lineSchema, lineChartRenderer);
+				lineChartRenderer);
 	}
-
-	var barSchema = {
-		id: {
-			id: true,
-			type: 'integer'
-		},
-		x: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		upperBase: {
-			type: 'number'
-		},
-		rectHeight: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		fill: {
-			type: 'string'
-		}
-	};
 
 	/**
 	 * バーチャートレンダラ―を生成します。
@@ -2454,14 +2415,14 @@
 			 * この系列の描画をします
 			 * 
 			 * @param {Boolean} animate アニメーションするか
-			 * @param {ChartModel} preRendererChartModel この系列より１つ前の系列のChartModel
+			 * @param {ChartDataSource} preChartDataSource この系列より１つ前の系列のChartDataSource
 			 * @memberOf BarChartRenderer
 			 */
-			draw: function(animate, preRendererChartModel) {
+			draw: function(animate, preChartDataSource) {
 				$(this.rootElement).empty();
 				this.$path = null;
 
-				this._createBarDataItems(preRendererChartModel);
+				this._createBarDataItems(preChartDataSource);
 
 				var count = 1;
 				var animateNum = this.seriesSetting.animateNum;
@@ -2472,11 +2433,9 @@
 				function doAnimation() {
 					var rate = count / animateNum;
 					if (count == 1) {
-						this._appendBars(this.chartDataSource.toArray(), preRendererChartModel,
-								rate);
+						this._appendBars(preChartDataSource, rate);
 					} else if (count > 1) {
-						this._updateBars(this.chartDataSource.toArray(), preRendererChartModel,
-								rate);
+						this._updateBars(preChartDataSource, rate);
 					}
 
 					count++;
@@ -2492,10 +2451,10 @@
 			},
 
 			_redraw: function() {
-				this._appendBars(this.chartDataSource.toArray());
+				this._appendBars();
 			},
 
-			_createBarDataItems: function(preRendererChartModel) {
+			_createBarDataItems: function(preChartDataSource) {
 				this.chartDataSource.removeAll();
 
 				var barData = [];
@@ -2557,14 +2516,14 @@
 				};
 			},
 
-			_appendBars: function(chartItems, preRendererChartModel, rate) {
+			_appendBars: function(preChartDataSource, rate) {
+				var chartItems = this.chartDataSource.getItems();
 				var height = this.chartSetting.get('height');
-				for (var i = 0, len = chartItems.length; i < len; i++) {
-					var chartItem = chartItems[i];
-					var chartObj = chartItem.get();
-					chartObj.y = calcY(chartItem, 'upperBase', preRendererChartModel, height, rate);
-					this._appendBar(chartObj, $(this.rootElement), chartItem.get('fill'), {
-						id: h5format(RECT_ELM_ID_FORMAT, chartItem.get('id'), this.name),
+				for ( var id in chartItems) {
+					var chartItem = chartItems[id];
+					chartItem.y = calcY(chartItem, 'upperBase', preChartDataSource, height, rate);
+					this._appendBar(chartItem, $(this.rootElement), chartItem.fill, {
+						id: h5format(RECT_ELM_ID_FORMAT, id, this.name),
 						'class': 'barChart chartElm'
 					});
 				}
@@ -2576,13 +2535,14 @@
 						chartObj.rectHeight, color, prop, $elm);
 			},
 
-			_updateBars: function(chartItems, preRendererChartModel, rate) {
-				for (var i = 0, len = chartItems.length; i < len; i++) {
-					var chartItem = chartItems[i];
+			_updateBars: function(preChartDataSource, rate) {
+				var chartItems = this.chartDataSource.getItems();
+				for ( var id in chartItems) {
+					var chartItem = chartItems[id];
 					var height = this.chartSetting.get('height');
 					var width = this.chartSetting.get('dx') * 0.5;
-					this._updateBar(chartItem.get('id'), calcY(chartItem, 'upperBase',
-							preRendererChartModel, height, rate), chartItem.get('rectHeight'));
+					this._updateBar(id, calcY(chartItem, 'upperBase', preChartDataSource, height,
+							rate), chartItem.rectHeight);
 				}
 			},
 
@@ -2597,34 +2557,38 @@
 
 			_chartModelChangeListener: function(ev) {
 				// 表示範囲が広がった時に、左端のidを探す
-				for (var i = 0, len = ev.created.length; i < len; i++) {
-					if (ev.created[i].get('id') < this._leftEndChartItemId) {
-						this._leftEndChartItemId = ev.created[i].get('id');
+				if (ev.created) {
+					for (var i = 0, len = ev.created.length; i < len; i++) {
+						if (ev.created[i].id < this._leftEndChartItemId) {
+							this._leftEndChartItemId = ev.created[i].id;
+						}
 					}
 				}
 
 				// 座標情報が変更されたときに、表示に反映する
-				for (var i = 0, len = ev.changed.length; i < len; i++) {
-					var changed = ev.changed[i];
-					if (changed.props.upperBase == null && changed.props.rectHeight == null) {
-						return;
-					}
+				if (ev.changed) {
+					for (var i = 0, len = ev.changed.length; i < len; i++) {
+						var changed = ev.changed[i];
+						if (changed.props.upperBase == null && changed.props.rectHeight == null) {
+							return;
+						}
 
-					var item = changed.target;
-					this._updateBar(item.get('id'), item.get('upperBase'), item.get('rectHeight'));
+						var item = changed.target;
+						this._updateBar(item.id, item.upperBase, item.rectHeight);
+					}
 				}
 			},
 
 			_getCentralPos: function(chartItem) {
 				return {
-					x: chartItem.get('x'),
-					y: chartItem.get('upperBase') + (chartItem.get('rectHeight') / 2)
+					x: chartItem.x,
+					y: chartItem.upperBase + (chartItem.rectHeight / 2)
 				};
 			},
 
 			_appendHighLight: function(chartItem, $tooltip) {
 				// FIXME: ツールチップの色の出し方
-				this._appendBar(chartItem.get(), $tooltip, /*chartItem.get('fill')*/'yellow', {
+				this._appendBar(chartItem, $tooltip, /*chartItem.get('fill')*/'yellow', {
 					'class': 'highlight_bar',
 					stroke: 'yellow',
 					'stroke-width': '2px'
@@ -2635,89 +2599,11 @@
 			}
 		};
 
-		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, barSchema,
+		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting,
 				barChartRenderer);
 	}
 
 	var PIE_PATH_FORMAT = 'M {0},{0} L {1},{2} A {0},{0} 0 {5},1 {3},{4}';
-
-	var pieSchema = {
-		id: {
-			id: true,
-			type: 'integer'
-		},
-		sum: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		total: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		radius: {
-			type: 'number',
-			depend: {
-				on: ['sum', 'total'],
-				calc: function(ev) {
-					return this.get('sum') / this.get('total') * Math.PI * 2;
-				}
-			}
-		},
-		radian: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		x: {
-			type: 'number',
-			depend: {
-				on: ['radius'],
-				calc: function(ev) {
-					var radian = this.get('radian');
-					return radian + radian * Math.sin(this.get('radius'));
-				}
-			}
-		},
-		y: {
-			type: 'number',
-			depend: {
-				on: ['radius'],
-				calc: function(ev) {
-					var radian = this.get('radian');
-					return radian - radian * Math.cos(this.get('radius'));
-				}
-			}
-		},
-		largeArcFlg: {
-			type: 'integer',
-			constraint: {
-				notNull: true
-			}
-		},
-		preX: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		preY: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		stroke: {
-			type: 'string'
-		},
-		fill: {
-			type: 'string'
-		}
-	};
 
 	/**
 	 * パイチャートレンダラ―を生成します。
@@ -2780,9 +2666,9 @@
 				function doAnimation() {
 					var rate = count / animateNum;
 					if (count == 1) {
-						this._appendPies(this.chartDataSource.toArray(), rate);
+						this._appendPies(rate);
 					} else if (count > 1) {
-						this._updateBars(this.chartDataSource.toArray(), rate);
+						this._updateBars(rate);
 					}
 
 					count++;
@@ -2798,7 +2684,7 @@
 			},
 
 			_redraw: function() {
-				this._appendPies(this.chartDataSource.toArray());
+				this._appendPies();
 			},
 
 			_createPieDataItems: function() {
@@ -2843,16 +2729,21 @@
 				var pre = this.chartDataSource.get(id - 1);
 				var sum = value;
 				if (pre) {
-					sum += pre.get('sum');
+					sum += pre.sum;
 				}
+
+				var radius = sum / this._total * Math.PI * 2;
 
 				return {
 					id: id,
 					radian: this._radian,
+					radius: radius,
 					sum: sum,
 					total: this._total,
-					preX: pre ? pre.get('x') : this._radian,
-					preY: pre ? pre.get('y') : 0,
+					preX: pre ? pre.x : this._radian,
+					preY: pre ? pre.y : 0,
+					x: this._radian + this._radian * Math.sin(radius),
+					y: this._radian - this._radian * Math.cos(radius),
 					largeArcFlg: value < 0.5 * this._total ? 0 : 1,
 					fill: this._getColor(id),
 					stroke: this.seriesSetting.stroke || 'none'
@@ -2865,23 +2756,23 @@
 						|| 'none';
 			},
 
-			_appendPies: function(chartItems, preRendererChartModel, rate) {
+			_appendPies: function(preChartDataSource, rate) {
+				var chartItems = this.chartDataSource.getItems();
 				var height = this.chartSetting.get('height');
-				for (var i = 0, len = chartItems.length; i < len; i++) {
-					var chartItem = chartItems[i];
+				for ( var id in chartItems) {
+					var chartItem = chartItems[id];
 					this._appendPie(chartItem, $(this.rootElement), {
-						id: h5format(PIE_ELM_ID_FORMAT, chartItem.get('id'), this.name),
+						id: h5format(PIE_ELM_ID_FORMAT, id, this.name),
 						'class': 'pieChart chartElm',
-						fill: chartItem.get('fill'),
-						stroke: chartItem.get('stroke')
+						fill: chartItem.fill,
+						stroke: chartItem.stroke
 					});
 				}
 			},
 
 			_appendPie: function(chartItem, $elm, prop) {
-				var d = h5.u.str.format(PIE_PATH_FORMAT, chartItem.get('radian'), chartItem
-						.get('preX'), chartItem.get('preY'), chartItem.get('x'),
-						chartItem.get('y'), chartItem.get('largeArcFlg'));
+				var d = h5.u.str.format(PIE_PATH_FORMAT, chartItem.radian, chartItem.preX,
+						chartItem.preY, chartItem.x, chartItem.y, chartItem.largeArcFlg);
 				graphicRenderer.appendPathElm(d, prop, $elm);
 			},
 
@@ -2891,8 +2782,8 @@
 
 			_getCentralPos: function(chartItem) {
 				return {
-					x: (chartItem.get('x') + chartItem.get('preX') + this._radian) / 3,
-					y: (chartItem.get('y') + chartItem.get('preY') + this._radian) / 3
+					x: (chartItem.x + chartItem.preX + this._radian) / 3,
+					y: (chartItem.y + chartItem.preY + this._radian) / 3
 				};
 			},
 
@@ -2905,7 +2796,7 @@
 				this._appendPie(chartItem, $tooltip, {
 					'class': 'highlight_pie',
 					'fill-opacity': 0.5,
-					fill: chartItem.get('fill')
+					fill: chartItem.fill
 				});
 			},
 			_showAdditionalLine: function() {
@@ -2913,58 +2804,9 @@
 			}
 		};
 
-		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, pieSchema,
+		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting,
 				pieChartRenderer);
 	}
-
-	var radarSchema = {
-		id: {
-			id: true,
-			type: 'integer'
-		},
-		radius: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		radian: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		x: {
-			type: 'number',
-			depend: {
-				on: ['radius', 'radian', 'centerX'],
-				calc: function() {
-					return this.get('centerX') + this.get('radius') * Math.sin(this.get('radian'));
-				}
-			}
-		},
-		y: {
-			type: 'number',
-			depend: {
-				on: ['radius', 'radian', 'centerY'],
-				calc: function() {
-					return this.get('centerY') - this.get('radius') * Math.cos(this.get('radian'));
-				}
-			}
-		},
-		centerX: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		},
-		centerY: {
-			type: 'number',
-			constraint: {
-				notNull: true
-			}
-		}
-	};
 
 	/**
 	 * レーダーチャートレンダラ―を生成します。
@@ -3027,9 +2869,9 @@
 				function doAnimation() {
 					var rate = count / animateNum;
 					if (count == 1) {
-						this._appendLines(this.chartDataSource.toArray(), rate);
+						this._appendLines(rate);
 					} else if (count > 1) {
-						this._updateLines(this.chartDataSource.toArray(), rate);
+						this._updateLines(rate);
 					}
 
 					count++;
@@ -3049,25 +2891,27 @@
 			},
 
 			_redraw: function() {
-				this._appendLines(this.chartDataSource.toArray());
+				this._appendLines();
 			},
 
-			_appendLines: function(lines, rate) {
+			_appendLines: function(rate) {
 				var $root = $(this.rootElement);
-				var chartItems = lines || this.chartDataSource.toArray();
 
-				if (!chartItems || !chartItems.length) {
+				if (!this.chartDataSource.length) {
 					return;
 				}
 
+				var chartItems = this.chartDataSource.getItems();
+
 				var height = this.chartSetting.get('height');
 
-				var item0 = chartItems[0];
+				var fromId = this.chartDataSource.fromId;
+				var toId = this.chartDataSource.toId;
+
 				var d = '';
-				var len = chartItems.length;
-				for (var i = 0; i < len; i++) {
-					d += i === 0 ? 'M' : ' L';
-					d += chartItems[i].get('x') + ',' + chartItems[i].get('y');
+				for (var i = fromId; i < toId; i++) {
+					d += i === fromId ? 'M' : ' L';
+					d += chartItems[i].x + ',' + chartItems[i].y;
 				}
 				d += ' Z';
 
@@ -3148,7 +2992,7 @@
 		};
 
 		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting,
-				radarSchema, radarChartRenderer);
+				radarChartRenderer);
 	}
 
 
@@ -3654,7 +3498,7 @@
 	});
 
 	var chartSequense = 0;
-	
+
 	var dataSourceManager = h5.ui.components.chart.dataSourceManager;
 
 	/**
@@ -3980,7 +3824,7 @@
 
 			this._renderers = {};
 			this._removeToolTip();
-			
+
 			// TODO: データ生成はイベントをあげるようにして、ここは同期的な書き方にしたほうがよいかもしれない
 			this._createChartRenderes(this.settings).done(this.own(function() {
 				this.isInitDraw = false;
@@ -4138,8 +3982,8 @@
 
 		_drawByRenderer: function(renderer) {
 			var preRenderer = this._getPreRenderer(renderer);
-			var preChartModel = preRenderer ? preRenderer.chartDataSource.chartModel : null;
-			renderer.draw(true, preChartModel);
+			var preChartDataSource = preRenderer ? preRenderer.chartDataSource : null;
+			renderer.draw(true, preChartDataSource);
 		},
 
 		/**
@@ -4191,7 +4035,7 @@
 				} else {
 					this.$seriesGroup.prepend(g);
 				}
-				
+
 				var dataSource;
 				if (seriesSettings.data.manager) {
 					dataSource = seriesSettings.data;
@@ -4290,10 +4134,6 @@
 			}
 
 			this._endUpdateInner();
-
-			// チャートを左にスライドする
-			var translateX = this.chartSetting.get('translateX');
-			this.chartSetting.set('translateX', translateX - this.chartSetting.get('dx'));
 
 			this._addedCount++;
 		},
