@@ -4152,11 +4152,12 @@
 
 			for ( var name in this._renderers) {
 				var chartDataSource = this._renderers[name].chartDataSource;
-				var rightEndId = chartDataSource.dataSource.sequence.current() - movedNum;
+				var dataSource = chartDataSource.dataSource;
+				var rightEndId = dataSource.sequence.current() - movedNum;
 				var leftEndId = rightEndId - this.chartSetting.get('dispDataSize');
 				for (var i = 0; i < move; i++) {
-					var item = chartDataSource.getDataObj(rightEndId + i);
-					chartDataSource.add(item);
+					var item = dataSource.get(rightEndId + i);
+					chartDataSource.create(item);
 					this._renderers[name].updateChart(item, leftEndId, false);
 				}
 			}
@@ -4183,11 +4184,12 @@
 
 			for ( var name in this._renderers) {
 				var chartDataSource = this._renderers[name].chartDataSource;
-				var rightEndId = chartDataSource.dataSource.sequence.current() - movedNum - 1;
+				var dataSource = chartDataSource.dataSource;
+				var rightEndId = dataSource.sequence.current() - movedNum - 1;
 				var leftEndId = rightEndId - this.chartSetting.get('dispDataSize');
 				for (var i = 0; i < num; i++) {
-					var item = chartDataSource.getDataObj(leftEndId - i);
-					chartDataSource.add(item);
+					var item = dataSource.get(leftEndId - i);
+					chartDataSource.create(item);
 					this._renderers[name].updateChart(item, rightEndId, true);
 				}
 			}
