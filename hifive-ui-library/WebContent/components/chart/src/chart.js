@@ -93,16 +93,21 @@
 		/**
 		 * データソースを生成します
 		 * 
-		 * @param {Object} seriesSetting 系列の設定情報
+		 * @param {Object} params 系列の設定情報
 		 * @returns {DataSource} データソース
 		 * @memberOf DataSourceManager
 		 */
-		createDataSource: function(seriesSetting) {
-			var name = seriesSetting.name;
-			var dataSource = new DataSource(name, this._count, seriesSetting.keepDataSize);
+		createDataSource: function(params) {
+			var name = params.name;
+			var dataSource = new DataSource(name, this._count, params.keepDataSize);
 			dataSource.manager = this;
-			dataSource.addEventListener('dataChange', this.own(this._addUpdateEventListener));
 			this._map[name] = dataSource;
+
+			dataSource.addEventListener('dataChange', this.own(this._addUpdateEventListener));
+			if (params.data || params.url) {
+				dataSource.loadData(params);
+			}
+
 			this._count++;
 			return dataSource;
 		},
@@ -238,6 +243,7 @@
 		this.name = name;
 		this.number = number;
 		this._maxSize = maxSize || Infinity; // 指定されなかった場合は
+
 		this.dataMap = {};
 		this.length = 0;
 		this.sequence = 0;
