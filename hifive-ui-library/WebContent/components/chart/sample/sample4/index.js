@@ -18,6 +18,8 @@
 
 	var DUMMY_DATA_SIZE = 5;
 
+	var dataSourceManager = h5.ui.components.chart.dataSourceManager;
+
 	/**
 	 * @class
 	 * @memberOF ui.sample.chart
@@ -30,25 +32,25 @@
 
 		/**
 		 * データ内の右端のインデックス
-		 *
+		 * 
 		 * @memberOf ui.sample.chart.pageController
 		 */
 		_dataIndex: 0,
 
 		/**
 		 * 初期幅
-		 *
+		 * 
 		 * @memberOf ui.sample.chart.pageController
 		 */
 		_width: 600,
 
 		/**
 		 * 初期高さ
-		 *
+		 * 
 		 * @memberOf ui.sample.chart.pageController
 		 */
 		_height: 480,
-		
+
 		_series: [],
 
 		_chartController: h5.ui.components.chart.ChartController, // チャートライブラリ
@@ -84,31 +86,38 @@
 
 		/**
 		 * 系列の定義オブジェクトを生成する
-		 *
+		 * 
 		 * @memberOf ui.sample.chart.pageController
 		 * @returns {Object} 系列の定義オブジェクト
 		 */
 		_createNewSeries: function() {
 			var data = ui.sample.chart.createChartDummyData(DUMMY_DATA_SIZE, 100, 50); // ダミーデータを生成
-			
+			var name = 'pie_series' + this._series.length;
+
+			var dataSource = dataSourceManager.createDataSource({
+				name: name,
+				type: 'local', // ローカルを指定
+				// ダミーデータを生成
+				data: data
+			});
+
 			var colors = [];
 			for (var i = 0; i < DUMMY_DATA_SIZE; i++) {
 				colors.push(ui.sample.chart.getRandomColor());
 			}
 
-			var name = 'pie_series' + this._series.length;
 			// 系列定義
 			return {
 				name: name, //系列名(キーとして使用する)
 				type: 'pie',
-				data: data, // データ
+				data: dataSource, // データ
 				propNames: { // チャートに表示するときに使用するプロパティ名
-					y: 'val' 
+					y: 'val'
 				},
 				colors: colors
 			};
 		},
-		
+
 		_getTooltipContent: function(data) {
 			return data.label + ':' + data.val.toString();
 		}

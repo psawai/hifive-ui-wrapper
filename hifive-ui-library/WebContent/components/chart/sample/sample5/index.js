@@ -27,7 +27,7 @@
 	}
 
 	var dataSourceManager = h5.ui.components.chart.dataSourceManager;
-	
+
 	/**
 	 * @class
 	 * @memberOF ui.sample.chart
@@ -40,21 +40,21 @@
 
 		/**
 		 * データ内の右端のインデックス
-		 *
+		 * 
 		 * @memberOf ui.sample.chart.pageController
 		 */
 		_dataIndex: 0,
 
 		/**
 		 * 初期幅
-		 *
+		 * 
 		 * @memberOf ui.sample.chart.pageController
 		 */
 		_width: 600,
 
 		/**
 		 * 初期高さ
-		 *
+		 * 
 		 * @memberOf ui.sample.chart.pageController
 		 */
 		_height: 480,
@@ -76,26 +76,24 @@
 
 		__ready: function(context) {
 			this._radarDataSource = dataSourceManager.createDataSource({
-				name: 'radar_series_0'
+				name: 'radar_series_0',
+				type: 'local', // ローカルを指定
+				// ダミーデータを生成
+				data: ui.sample.chart.createChartDummyData(DUMMY_DATA_SIZE, 5, 5)
 			});
-			
-			this._radarDataSource.loadData({
-				data: ui.sample.chart.createChartDummyData(DUMMY_DATA_SIZE, 5, 5)  // ダミーデータを生成
-			}).done(this.own(function() {
-				this._drawRadar(this._radarDataSource);
-			}));
+
+			this._drawRadar(this._radarDataSource);
 
 			this._arcDataSource = dataSourceManager.createDataSource({
-				name: 'arc_series_0'
+				name: 'arc_series_0',
+				type: 'local', // ローカルを指定
+				// ダミーデータを生成
+				data: createChartDummyData(10, 5, 5)
 			});
-			
-			this._arcDataSource.loadData({
-				data: createChartDummyData(10, 5, 5)  // ダミーデータを生成
-			}).done(this.own(function() {
-				this._drawArc(this._arcDataSource);
-			}));	
+
+			this._drawArc(this._arcDataSource);
 		},
-		
+
 		_drawRadar: function(dataSource) {
 			var color = ui.sample.chart.getRandomColor();
 			this._chart1Controller.draw({
@@ -126,7 +124,7 @@
 				series: [{
 					name: dataSource.name, //系列名(キーとして使用する)
 					type: 'radar',
-					data: dataSource, 
+					data: dataSource,
 					propNames: {
 						'y': 'val'
 					},
@@ -166,7 +164,7 @@
 				series: [{
 					name: dataSource.name, //系列名(キーとして使用する)
 					type: 'arc',
-					data: dataSource, 
+					data: dataSource,
 					propNames: {
 						'radius': 'val'
 					},
@@ -179,17 +177,15 @@
 		_getTooltipContent: function(data) {
 			return data.label + ':' + data.val.toString();
 		},
-		
-		'button click': function() {
-			this._radarDataSource.manager.beginUpdate();
-			this._radarDataSource.removeAll();
-			this._radarDataSource.addAll(ui.sample.chart.createChartDummyData(DUMMY_DATA_SIZE, 5, 5));
-			this._radarDataSource.manager.endUpdate();
 
-			this._arcDataSource.manager.beginUpdate();
+		'button click': function() {
+			dataSourceManager.beginUpdate();
+			this._radarDataSource.removeAll();
 			this._arcDataSource.removeAll();
+			this._radarDataSource.addAll(ui.sample.chart
+					.createChartDummyData(DUMMY_DATA_SIZE, 5, 5));
 			this._arcDataSource.addAll(createChartDummyData(10, 5, 5));
-			this._arcDataSource.manager.endUpdate();
+			dataSourceManager.endUpdate();
 		}
 	};
 
