@@ -2690,6 +2690,7 @@
 			},
 
 			_redraw: function() {
+				$(this.rootElement).empty();
 				this._appendPies();
 			},
 
