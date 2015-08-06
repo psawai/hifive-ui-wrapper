@@ -2426,7 +2426,6 @@
 			 */
 			draw: function(animate, preChartDataSource) {
 				$(this.rootElement).empty();
-				this.$path = null;
 
 				this._createBarDataItems(preChartDataSource);
 
@@ -2457,6 +2456,7 @@
 			},
 
 			_redraw: function() {
+				$(this.rootElement).empty();
 				this._appendBars();
 			},
 
