@@ -755,11 +755,11 @@
 					this._chartSetting.set('dispDataSize', this.dataSource.length);
 				}
 
-				if (series.data.manager) {
+//				if (series.data.manager) {
 					this._addEventListener({
 						add: data
 					});
-				}
+//				}
 			}));
 		},
 
