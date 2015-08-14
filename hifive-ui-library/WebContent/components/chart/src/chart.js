@@ -403,6 +403,8 @@
 			};
 
 			this.dispatchEvent(event);
+			
+			this.sequence = h5.core.data.createSequence(1);
 		},
 		/**
 		 * データソースが持つデータを配列の形式で取得します
@@ -1345,7 +1347,7 @@
 			},
 
 			_addEventListener: function(ev) {
-				if (!ev.add) {
+				if (!ev.add || this.chartDataSource.length == 0) {
 					return;
 				}
 
