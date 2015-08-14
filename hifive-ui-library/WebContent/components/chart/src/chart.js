@@ -2613,6 +2613,8 @@
 
 	var PIE_PATH_FORMAT = 'M {0},{0} L {1},{2} A {0},{0} 0 {5},1 {3},{4}';
 
+	var CIRCLE_PATH_FORMAT = 'M {1},{2} A {0},{0} 0 {5},1 {3},{4} A {0},{0} 0 {5},1 {1} {2} z';
+
 	/**
 	 * パイチャートレンダラ―を生成します。
 	 * 
@@ -2768,9 +2770,12 @@
 			_appendPies: function(preChartDataSource, rate) {
 				var chartItems = this.chartDataSource.getItems();
 				var height = this.chartSetting.get('height');
+				
+				var appendFunc = this.chartDataSource.length == 1 ? this._appendCircle : this._appendPie;
+				
 				for ( var id in chartItems) {
 					var chartItem = chartItems[id];
-					this._appendPie(chartItem, $(this.rootElement), {
+					appendFunc(chartItem, $(this.rootElement), {
 						id: h5format(PIE_ELM_ID_FORMAT, id, this.name),
 						'class': 'pieChart chartElm',
 						fill: chartItem.fill,
@@ -2782,6 +2787,12 @@
 			_appendPie: function(chartItem, $elm, prop) {
 				var d = h5.u.str.format(PIE_PATH_FORMAT, chartItem.radian, chartItem.preX,
 						chartItem.preY, chartItem.x, chartItem.y, chartItem.largeArcFlg);
+				graphicRenderer.appendPathElm(d, prop, $elm);
+			},
+			
+			_appendCircle: function(chartItem, $elm, prop) {
+				var d = h5.u.str.format(CIRCLE_PATH_FORMAT, chartItem.radian, chartItem.preX, 
+						chartItem.preY, 2 * chartItem.radian - chartItem.preX , 2 * chartItem.radian - chartItem.y, chartItem.largeArcFlg);
 				graphicRenderer.appendPathElm(d, prop, $elm);
 			},
 
