@@ -20,7 +20,7 @@
 
 	/**
 	 * コンテキストを自分自身にした関数を取得します
-	 * 
+	 *
 	 * @param {Function} func 関数
 	 * @returns コンテキストを自分自身にした関数
 	 */
@@ -34,7 +34,7 @@
 
 	/**
 	 * データソースを管理するクラス
-	 * 
+	 *
 	 * @class
 	 * @name DataSourceManager
 	 */
@@ -49,7 +49,7 @@
 	DataSourceManager.prototype = {
 		/**
 		 * コンテキストを自分自身にした関数を取得します
-		 * 
+		 *
 		 * @param {Function} func 関数
 		 * @returns {Function} コンテキストを自分自身にした関数
 		 * @memberOf DataSourceManager
@@ -58,7 +58,7 @@
 
 		/**
 		 * データソースの一覧を取得します
-		 * 
+		 *
 		 * @returns {Object} データソースの一覧
 		 * @memberOf DataSourceManager
 		 */
@@ -68,7 +68,7 @@
 
 		/**
 		 * 積み上げた値を取得します
-		 * 
+		 *
 		 * @param {Number} id 積み上げるデータのID
 		 * @param {Number} yProp y軸方向のデータのオブジェクト内のプロパティ名
 		 * @param {Number} number 所属する系列の番号
@@ -92,7 +92,7 @@
 
 		/**
 		 * データソースを生成します
-		 * 
+		 *
 		 * @param {Object} params 系列の設定情報
 		 * @returns {DataSource} データソース
 		 * @memberOf DataSourceManager
@@ -114,7 +114,7 @@
 
 		/**
 		 * データソースを削除します
-		 * 
+		 *
 		 * @param {String} name 削除するデータソースの系列名
 		 * @returns {DataSource} データソース
 		 * @memberOf DataSourceManager
@@ -125,7 +125,7 @@
 
 		/**
 		 * データソースを取得します
-		 * 
+		 *
 		 * @param {String} name 取得するデータソースの系列名
 		 * @returns {DataSource} データソース
 		 * @memberOf DataSourceManager
@@ -136,7 +136,7 @@
 
 		/**
 		 * 描画範囲内の最大値と最小値を取得します
-		 * 
+		 *
 		 * @param {Number} rightEndId 描画範囲の右端のID
 		 * @param {Number} dispDataSize 表示数
 		 * @returns {Object} [obj] {Number} [obj.maxVal] 最大値 {Number} [obj.minVal] 最小値
@@ -161,7 +161,7 @@
 
 		/**
 		 * アップデートセッションを開始します
-		 * 
+		 *
 		 * @memberOf DataSourceManager
 		 */
 		beginUpdate: function() {
@@ -170,7 +170,7 @@
 
 		/**
 		 * アップデートセッション中にアップデートイベントを登録する
-		 * 
+		 *
 		 * @param {Event} イベントオブジェクト
 		 * @memberOf DataSourceManager
 		 */
@@ -203,7 +203,7 @@
 
 		/**
 		 * アップデートセッション中であるかを返します
-		 * 
+		 *
 		 * @memberOf DataSourceManager
 		 * @returns {Boolean} アップデートセッション中であるか
 		 */
@@ -213,7 +213,7 @@
 
 		/**
 		 * アップデートセッション中に起こったイベントを一斉に発火します
-		 * 
+		 *
 		 * @memberOf DataSourceManager
 		 */
 		endUpdate: function() {
@@ -233,7 +233,7 @@
 
 	/**
 	 * データソース
-	 * 
+	 *
 	 * @param {String} name 系列名
 	 * @param {Number} number 系列にシーケンシャルに渡される番号
 	 * @param {Number} maxSize データソースが保存する最大データ数
@@ -253,7 +253,7 @@
 	DataSource.prototype = {
 		/**
 		 * コンテキストを自分自身にした関数を取得します
-		 * 
+		 *
 		 * @memberOf DataSource
 		 * @param {Function} func 関数
 		 * @returns {Function} コンテキストを自分自身にした関数
@@ -262,7 +262,7 @@
 
 		/**
 		 * データを読み込む。系列の設定で指定されている場合はそれを利用します
-		 * 
+		 *
 		 * @param series {Object} 系列の設定オブジェクト
 		 * @memberOf DataSource
 		 */
@@ -315,7 +315,7 @@
 
 		/**
 		 * 指定したIDのデータを取得します
-		 * 
+		 *
 		 * @param {Number} id 取得するデータのID
 		 * @param {Number} 指定したIDのデータ
 		 * @memberOf DataSource
@@ -326,7 +326,7 @@
 
 		/**
 		 * データを追加します
-		 * 
+		 *
 		 * @param {Object} 追加するデータ
 		 * @memberOf DataSource
 		 */
@@ -374,7 +374,7 @@
 
 		/**
 		 * 指定したIDのデータを削除します
-		 * 
+		 *
 		 * @param {Number} 削除するデータのID
 		 * @memberOf DataSource
 		 */
@@ -388,7 +388,7 @@
 
 		/**
 		 * 指定したIDのデータを削除します
-		 * 
+		 *
 		 * @memberOf DataSource
 		 */
 		removeAll: function() {
@@ -403,12 +403,12 @@
 			};
 
 			this.dispatchEvent(event);
-			
+
 			this.sequence = h5.core.data.createSequence(1);
 		},
 		/**
 		 * データソースが持つデータを配列の形式で取得します
-		 * 
+		 *
 		 * @memberOf DataSource
 		 * @returns {Array} 配列形式のデータ
 		 */
@@ -423,7 +423,7 @@
 
 		/**
 		 * 積み上げでの対応するデータオブジェクトを取得します
-		 * 
+		 *
 		 * @param {DataItem} item 対応するデータアイテム
 		 * @returns {Object} 積み上げた結果のデータオブジェクト
 		 * @memberOf DataSource
@@ -434,7 +434,7 @@
 
 		/**
 		 * 描画範囲内の最大値と最小値を取得します
-		 * 
+		 *
 		 * @param {Number} rightEndId 描画範囲の右端のID
 		 * @param {Number} dispDataSize 表示数
 		 * @returns {Object} [obj] {Number} [obj.maxVal] 最大値 {Number} [obj.minVal] 最小値
@@ -635,7 +635,7 @@
 
 	/**
 	 * グループ内でのY座標の位置を計算します
-	 * 
+	 *
 	 * @param val 値
 	 * @param rangeMin 領域の最小値
 	 * @param rangeMax 領域の最大値
@@ -649,7 +649,7 @@
 
 	/**
 	 * ２つの値からグループ内でのY座標の位置の差を計算します
-	 * 
+	 *
 	 * @param val1 値1
 	 * @param val2 値2
 	 * @param rangeMin 領域の最小値
@@ -667,7 +667,7 @@
 
 	/**
 	 * 指定したマージンの値を取得します
-	 * 
+	 *
 	 * @param {Object} obj マージンのプロパティを持つオブジェクト
 	 * @param {String} type margin/paddingのいずれか
 	 * @param {String} prop Top/Bottom/Left/Rightのいずれか
@@ -686,7 +686,7 @@
 
 	/**
 	 * コンテキストを自分自身にした関数を取得します
-	 * 
+	 *
 	 * @param {Function} func 関数
 	 * @returns コンテキストを自分自身にした関数
 	 */
@@ -701,7 +701,7 @@
 
 	/**
 	 * チャート描画用のデータソース
-	 * 
+	 *
 	 * @param {DataSource} dataSource データソース
 	 * @param {Object} seriesSetting 系列の設定
 	 * @param {ChartSetting} chartSetting チャート全体の設定
@@ -714,7 +714,7 @@
 	ChartDataSource.prototype = {
 		/**
 		 * コンテキストを自分自身にした関数を取得します
-		 * 
+		 *
 		 * @memberOf ChartDataSource
 		 * @param {Function} func 関数
 		 * @returns {Function} コンテキストを自分自身にした関数
@@ -746,7 +746,7 @@
 
 		/**
 		 * データを読み込む。系列の設定で指定されている場合はそれを利用します
-		 * 
+		 *
 		 * @param series {Object} 系列の設定オブジェクト
 		 * @memberOf ChartDataSource
 		 */
@@ -757,17 +757,17 @@
 					this._chartSetting.set('dispDataSize', this.dataSource.length);
 				}
 
-//				if (series.data.manager) {
-					this._addEventListener({
-						add: data
-					});
-//				}
+				//				if (series.data.manager) {
+				this._addEventListener({
+					add: data
+				});
+				//				}
 			}));
 		},
 
 		/**
 		 * 種別ごとにプロパティマップをセットします
-		 * 
+		 *
 		 * @param {String} type チャートの種別
 		 * @param {Object} propNames 使用するプロパティの対応マップ
 		 * @memberOf ChartDataSource
@@ -819,7 +819,7 @@
 
 		/**
 		 * 指定したIDのデータオブジェクトを取得します
-		 * 
+		 *
 		 * @param {Number} id データID
 		 * @return {Object} データオブジェクト
 		 * @memberOf ChartDataSource
@@ -841,7 +841,7 @@
 
 		/**
 		 * 指定したIDのデータアイテムを取得します
-		 * 
+		 *
 		 * @param {Number} id データID
 		 * @return {ChartDataItem} チャートデータアイテム
 		 * @memberOf ChartDataSource
@@ -852,7 +852,7 @@
 
 		/**
 		 * すべてのアイテムのマップを取得します
-		 * 
+		 *
 		 * @return {Object} すべてのアイテムのマップ
 		 * @memberOf ChartDataSource
 		 */
@@ -862,7 +862,7 @@
 
 		/**
 		 * データオブジェクトを作成します
-		 * 
+		 *
 		 * @param {Object|Array} データオブジェクトまたはその配列
 		 * @return {ChartItem|ChartItem[]} チャートデータアイテムまたはその配列
 		 * @memberOf ChartDataSource
@@ -897,7 +897,7 @@
 
 		/**
 		 * 指定したIDのデータオブジェクトを削除します
-		 * 
+		 *
 		 * @param {Number} id データID
 		 * @memberOf ChartDataSource
 		 */
@@ -923,7 +923,7 @@
 
 		/**
 		 * 保持するデータアイテムをすべて削除します
-		 * 
+		 *
 		 * @param {Number} id データID
 		 * @memberOf ChartDataSource
 		 */
@@ -1059,7 +1059,7 @@
 
 		/**
 		 * 指定したデータオブジェクトのx軸のデータの値を取得します
-		 * 
+		 *
 		 * @param {Number|DataItem} idOrItem アイテムまたはそのID
 		 * @returns {Any} x軸のデータの値
 		 * @memberOf ChartDataSource
@@ -1079,7 +1079,7 @@
 
 		/**
 		 * 描画範囲内の最大値と最小値を取得します
-		 * 
+		 *
 		 * @param {Number} dispDataSize 表示数
 		 * @param {Number} moveNum 右端からのチャートの移動数
 		 * @memberOf ChartDataSource
@@ -1111,7 +1111,7 @@
 
 	/**
 	 * チャート描画用のデータソース
-	 * 
+	 *
 	 * @class RadarChartDataSource
 	 */
 	var radarChartDataSource = {
@@ -1172,7 +1172,7 @@
 
 	/**
 	 * チャート描画用のデータソース
-	 * 
+	 *
 	 * @class ArcChartDataSource
 	 */
 	var arcChartDataSource = {
@@ -1236,7 +1236,7 @@
 
 	/**
 	 * チャートレンダラ―を生成します。
-	 * 
+	 *
 	 * @private
 	 * @param {Element} rootElement このラインチャートのルート要素
 	 * @param {DataSource} dataSource このラインチャートのデータソース
@@ -1249,7 +1249,7 @@
 
 		/**
 		 * チャートレンダラ―の基底クラス
-		 * 
+		 *
 		 * @param {Element} rootElement このラインチャートのルート要素
 		 * @param {DataSource} dataSource このラインチャートのデータソース
 		 * @param {Object} chartSetting 設定
@@ -1287,7 +1287,7 @@
 		ChartRendererBase.prototype = {
 			/**
 			 * コンテキストを自分自身にした関数を取得します
-			 * 
+			 *
 			 * @memberOf ChartRenderer
 			 * @param {Function} func 関数
 			 * @returns {Function} コンテキストを自分自身にした関数
@@ -1337,7 +1337,7 @@
 
 			/**
 			 * データをこの系列に追加します
-			 * 
+			 *
 			 * @param {Object} data データオブジェクト
 			 * @memberOf ChartRendererBase
 			 */
@@ -1375,7 +1375,7 @@
 
 			/**
 			 * チャートを更新します
-			 * 
+			 *
 			 * @param {Object} addedData 追加されたデータ
 			 * @param {Number} removedItemId 削除されたアイテムのID
 			 * @param {Boolean} isRightEndRemove 右端のデータが削除されたか
@@ -1405,7 +1405,7 @@
 
 			/**
 			 * 各データのY座標の値を更新します
-			 * 
+			 *
 			 * @memberOf ChartRendererBase
 			 */
 			updateYVal: function() {
@@ -1438,7 +1438,7 @@
 
 			/**
 			 * マウスオーバーした位置のデータIDを取得します
-			 * 
+			 *
 			 * @param {Object} context イベントコンテキスト
 			 * @param {String} type 種別
 			 * @param {Object} correction 補正項
@@ -1475,7 +1475,7 @@
 
 			/**
 			 * ツールチップを表示します
-			 * 
+			 *
 			 * @param {Number} tooltipId ツールチップを表示するデータのID
 			 * @param {jQuery} $tooltip ツールチップ要素のjQueryオブジェクト
 			 * @memberOf ChartRendererBase
@@ -1567,7 +1567,7 @@
 
 			/**
 			 * ツールチップの描画を更新します
-			 * 
+			 *
 			 * @param {Number} tooltipId ツールチップを表示するデータのID
 			 * @param {jQuery} $tooltip ツールチップ要素のjQueryオブジェクト
 			 * @memberOf ChartRendererBase
@@ -1596,7 +1596,7 @@
 
 			/**
 			 * X軸のラベルの配列を取得します
-			 * 
+			 *
 			 * @returns {Array} X軸のラベルの配列
 			 * @memberOf ChartRendererBase
 			 */
@@ -1648,7 +1648,7 @@
 
 	/**
 	 * ローソクチャートレンダラ―を生成します。
-	 * 
+	 *
 	 * @private
 	 * @param {Element} rootElement このラインチャートのルート要素
 	 * @param {DataSource} dataSource このラインチャートのデータソース
@@ -1692,7 +1692,7 @@
 
 			/**
 			 * ローソクを描画するためのチャートアイテムを生成します
-			 * 
+			 *
 			 * @pararm {Object} data 元データオブジェクトの配列
 			 * @return {ChartItem[]} 描画用のチャートアイテムの配列
 			 * @memberOf CandleStickRenderer
@@ -1703,7 +1703,7 @@
 
 			/**
 			 * DataItemをチャート描画用のオブジェクトをを取得します
-			 * 
+			 *
 			 * @param {Object} data データ
 			 * @returns {Object} 描画用のオブジェクト
 			 * @memberOf CandleStickChartRenderer
@@ -1746,7 +1746,7 @@
 
 			/**
 			 * この系列のローソクチャートを描画します
-			 * 
+			 *
 			 * @memberOf CandleStickChartRenderer
 			 */
 			draw: function() {
@@ -2019,7 +2019,7 @@
 
 	/**
 	 * ラインチャートレンダラ―を生成します。
-	 * 
+	 *
 	 * @private
 	 * @param {Element} rootElement このラインチャートのルート要素
 	 * @param {DataSource} dataSource このラインチャートのデータソース
@@ -2047,7 +2047,7 @@
 
 			/**
 			 * 系列の左端のアイテムのIDを取得します
-			 * 
+			 *
 			 * @return {Number} 系列の左端のアイテムのID
 			 * @memberOf LineChartRenderer
 			 */
@@ -2057,7 +2057,7 @@
 
 			/**
 			 * この系列の描画をされます
-			 * 
+			 *
 			 * @param {Boolean} animate アニメーションするか
 			 * @param {ChartDataSource} preChartDataSource この系列より１つ前の系列のChartDataSource
 			 * @memberOf LineChartRenderer
@@ -2124,7 +2124,7 @@
 				}
 				var fill = graphicRenderer.getFill(this.seriesSetting.fillColor, this.rootElement);
 				if (fill != null) {
-					d += h5format(PATH_LINE_FORMAT, chartItems[toId - 1].toX, this.chartSetting
+					d += h5format(PATH_LINE_FORMAT, chartItems[toId].toX, this.chartSetting
 							.get('height'))
 							+ h5format(PATH_LINE_FORMAT, item0.fromX, this.chartSetting
 									.get('height')) + ' Z';
@@ -2225,7 +2225,7 @@
 
 			/**
 			 * データアイテムをチャートアイテムに変換します
-			 * 
+			 *
 			 * @param {DataItem} dataItem データアイテム
 			 * @returns {ChartItem} 変換後のChartItem
 			 * @memberOf LineChartRenderer
@@ -2268,7 +2268,7 @@
 
 			/**
 			 * DataItemをチャート描画用のオブジェクトをを取得します
-			 * 
+			 *
 			 * @param {Object} dataObj データアイテム
 			 * @returns {Object} 描画用のオブジェクト
 			 * @memberOf LineChartRenderer
@@ -2311,7 +2311,7 @@
 
 			/**
 			 * X座標を取得します
-			 * 
+			 *
 			 * @param {Number|ChartItem} idOrItem 取得対象のIDまたはチャートアイテム
 			 * @returns {Number} x座標
 			 * @memberOf LineChartRenderer
@@ -2331,7 +2331,7 @@
 
 			/**
 			 * X方向の実データの値を取得します
-			 * 
+			 *
 			 * @param {Number|ChartItem} idOrItem 取得対象のIDまたはチャートアイテム
 			 * @returns {Number} X方向の実データの値
 			 * @memberOf LineChartRenderer
@@ -2406,7 +2406,7 @@
 
 	/**
 	 * バーチャートレンダラ―を生成します。
-	 * 
+	 *
 	 * @private
 	 * @param {Element} rootElement このラインチャートのルート要素
 	 * @param {DataSource} dataSource このラインチャートのデータソース
@@ -2421,7 +2421,7 @@
 		var barChartRenderer = {
 			/**
 			 * この系列の描画をします
-			 * 
+			 *
 			 * @param {Boolean} animate アニメーションするか
 			 * @param {ChartDataSource} preChartDataSource この系列より１つ前の系列のChartDataSource
 			 * @memberOf BarChartRenderer
@@ -2490,7 +2490,7 @@
 
 			/**
 			 * データオブジェクトをチャート描画用のオブジェクトに変換する
-			 * 
+			 *
 			 * @param {Object} dataObj データオブジェクト
 			 * @returns {Object} チャート描画用のオブジェクト
 			 */
@@ -2617,7 +2617,7 @@
 
 	/**
 	 * パイチャートレンダラ―を生成します。
-	 * 
+	 *
 	 * @private
 	 * @param {Element} rootElement このラインチャートのルート要素
 	 * @param {DataSource} dataSource このラインチャートのデータソース
@@ -2658,7 +2658,7 @@
 
 			/**
 			 * この系列の描画をします
-			 * 
+			 *
 			 * @param {Boolean} animate アニメーションするか
 			 * @memberOf PieChartRenderer
 			 */
@@ -2727,7 +2727,7 @@
 
 			/**
 			 * データオブジェクトをチャート描画用のオブジェクトに変換する
-			 * 
+			 *
 			 * @param {Object} dataObj データオブジェクト
 			 * @returns {Object} チャート描画用のオブジェクト
 			 */
@@ -2770,9 +2770,10 @@
 			_appendPies: function(preChartDataSource, rate) {
 				var chartItems = this.chartDataSource.getItems();
 				var height = this.chartSetting.get('height');
-				
-				var appendFunc = this.chartDataSource.length == 1 ? this._appendCircle : this._appendPie;
-				
+
+				var appendFunc = this.chartDataSource.length == 1 ? this._appendCircle
+						: this._appendPie;
+
 				for ( var id in chartItems) {
 					var chartItem = chartItems[id];
 					appendFunc(chartItem, $(this.rootElement), {
@@ -2789,10 +2790,11 @@
 						chartItem.preY, chartItem.x, chartItem.y, chartItem.largeArcFlg);
 				graphicRenderer.appendPathElm(d, prop, $elm);
 			},
-			
+
 			_appendCircle: function(chartItem, $elm, prop) {
-				var d = h5.u.str.format(CIRCLE_PATH_FORMAT, chartItem.radian, chartItem.preX, 
-						chartItem.preY, 2 * chartItem.radian - chartItem.preX , 2 * chartItem.radian - chartItem.y, chartItem.largeArcFlg);
+				var d = h5.u.str.format(CIRCLE_PATH_FORMAT, chartItem.radian, chartItem.preX,
+						chartItem.preY, 2 * chartItem.radian - chartItem.preX, 2 * chartItem.radian
+								- chartItem.y, chartItem.largeArcFlg);
 				graphicRenderer.appendPathElm(d, prop, $elm);
 			},
 
@@ -2830,7 +2832,7 @@
 
 	/**
 	 * レーダーチャートレンダラ―を生成します。
-	 * 
+	 *
 	 * @private
 	 * @param {Element} rootElement このラインチャートのルート要素
 	 * @param {DataSource} dataSource このラインチャートのデータソース
@@ -2871,7 +2873,7 @@
 
 			/**
 			 * この系列の描画をします
-			 * 
+			 *
 			 * @param {Boolean} animate アニメーションするか
 			 * @memberOf RadarChartRenderer
 			 */
@@ -2983,7 +2985,7 @@
 
 			/**
 			 * X軸のラベルの配列を取得します
-			 * 
+			 *
 			 * @returns {Array} X軸のラベルの配列
 			 * @memberOf ChartRendererBase
 			 */
@@ -3018,7 +3020,7 @@
 
 	/**
 	 * 軸を描画するレンダラ―
-	 * 
+	 *
 	 * @param {Element} axesElm 軸のルート要素
 	 * @param {ChartSettingItem} chartSetting 設定アイテム
 	 * @param {Object} axesSettings 軸の設定オブジェクト
@@ -3084,7 +3086,7 @@
 
 		/**
 		 * X軸のラベル領域の高さを取得します
-		 * 
+		 *
 		 * @memberOf AxisRenderer
 		 * @returns X軸のラベル領域の高さ
 		 */
@@ -3098,7 +3100,7 @@
 
 		/**
 		 * Y軸のラベル領域の幅を取得します
-		 * 
+		 *
 		 * @memberOf AxisRenderer
 		 * @returns Y軸のラベル領域の幅
 		 */
@@ -3112,7 +3114,7 @@
 
 		/**
 		 * X軸のラベル領域のマージンを取得します
-		 * 
+		 *
 		 * @memberOf AxisRenderer
 		 * @returns marginTopとmarginBottomを持つオブジェクト
 		 */
@@ -3135,7 +3137,7 @@
 
 		/**
 		 * Y軸のラベル領域のマージンを取得します
-		 * 
+		 *
 		 * @memberOf AxisRenderer
 		 * @returns marginLeftとmarginRightを持つオブジェクト
 		 */
@@ -3158,7 +3160,7 @@
 
 		/**
 		 * 軸のラベルを表示します
-		 * 
+		 *
 		 * @param xLabelArray x軸のラベルの配列
 		 */
 		showAxisLabels: function(xLabelArray) {
@@ -3224,7 +3226,7 @@
 
 		/**
 		 * 格子線を引く
-		 * 
+		 *
 		 * @memberOf AxisRenderer
 		 */
 		drawGridLines: function() {
@@ -3234,7 +3236,7 @@
 
 		/**
 		 * チャートの横の補助線を引く
-		 * 
+		 *
 		 * @memberOf AxisRenderer
 		 */
 		_drawHorizLines: function() {
@@ -3290,7 +3292,7 @@
 
 		/**
 		 * チャートの縦の補助線を引く
-		 * 
+		 *
 		 * @memberOf AxisRenderer
 		 */
 		_drawVertLines: function(renderer) {
@@ -3338,7 +3340,7 @@
 
 		/**
 		 * 軸の設定をセットします
-		 * 
+		 *
 		 * @param axesSettings
 		 * @memberOf AxisRenderer
 		 */
@@ -3364,7 +3366,7 @@
 
 	/**
 	 * 軸を描画するレンダラ―
-	 * 
+	 *
 	 * @param {Element} axesElm 軸のルート要素
 	 * @param {ChartSettingItem} chartSetting 設定アイテム
 	 * @param {Object} axesSetting 軸の設定オブジェクト
@@ -3393,7 +3395,7 @@
 
 		/**
 		 * 格子線を引く
-		 * 
+		 *
 		 * @memberOf RadarAxisRenderer
 		 */
 		drawGridLines: function() {
@@ -3507,7 +3509,7 @@
 
 		/**
 		 * 軸の設定をセットします
-		 * 
+		 *
 		 * @param axesSettings
 		 * @memberOf AxisRenderer
 		 */
@@ -3523,7 +3525,7 @@
 
 	/**
 	 * 描画を行うコントローラ
-	 * 
+	 *
 	 * @class
 	 * @memberOf h5.ui.components.chart
 	 * @name ChartController
@@ -3594,7 +3596,7 @@
 
 		/**
 		 * チャートの初期表示をされます
-		 * 
+		 *
 		 * @memberOf h5.ui.components.chart.ChartController
 		 */
 		_initChart: function(firstChartRenderer) {
@@ -3758,7 +3760,7 @@
 
 		/**
 		 * チャートの表示をされます
-		 * 
+		 *
 		 * @param {Object} 設定オブジェクト
 		 * @memberOf h5.ui.components.chart.ChartController
 		 */
@@ -3923,7 +3925,7 @@
 
 		/**
 		 * アップデートセッションを開始します
-		 * 
+		 *
 		 * @memberOf h5.ui.components.chart.ChartController
 		 */
 		beginUpdate: function() {
@@ -3932,7 +3934,7 @@
 
 		/**
 		 * アップデートセッションを終了し、更新を反映します
-		 * 
+		 *
 		 * @memberOf h5.ui.components.chart.ChartController
 		 */
 		endUpdate: function() {
@@ -4008,7 +4010,7 @@
 
 		/**
 		 * このチャートに設定した設定オブジェクトを取得します
-		 * 
+		 *
 		 * @returns {Object} 設定オブジェクト
 		 * @memberOf h5.ui.components.chart.ChartController
 		 */
@@ -4018,7 +4020,7 @@
 
 		/**
 		 * チャート全体に影響する設定をセットします
-		 * 
+		 *
 		 * @param {Object} チャート全体に関わる設定オブジェクト
 		 * @memberOf h5.ui.components.chart.ChartController
 		 */
@@ -4073,7 +4075,7 @@
 
 		/**
 		 * 系列を追加します。
-		 * 
+		 *
 		 * @param {Object} series 系列の設定オブジェクト
 		 * @memberOf h5.ui.components.chart.ChartController
 		 */
@@ -4094,7 +4096,7 @@
 
 		/**
 		 * 指定した名前の系列を削除します。
-		 * 
+		 *
 		 * @param {String} name 系列名
 		 * @memberOf h5.ui.components.chart.ChartController
 		 */
@@ -4129,7 +4131,7 @@
 		/**
 		 * データを追加します。追加するデータは配列で指定し、各要素が持つname属性を使用して付加する系列を判定します。<br>
 		 * dataで指定されなかった系列はcommonDataが挿入されます。
-		 * 
+		 *
 		 * @param {Array} data 追加するデータの配列
 		 * @param {Object} commonData 系列共通で指定するデータ
 		 * @memberOf h5.ui.components.chart.ChartController
@@ -4160,7 +4162,7 @@
 
 		/**
 		 * 表示位置を指定した数だけ進行方向にずらす。それ以上データが存在しない場合は、そこで停止します。
-		 * 
+		 *
 		 * @param {Number} num 進行するデータ数
 		 * @memberOf h5.ui.components.chart.ChartController
 		 */
@@ -4193,7 +4195,7 @@
 
 		/**
 		 * 表示位置を指定した数だけ進行方向と逆方向にずらす。それ以上データが存在しない場合は、そこで停止します。
-		 * 
+		 *
 		 * @param {Number} num 進行するデータ数
 		 * @memberOf h5.ui.components.chart.ChartController
 		 */
@@ -4224,7 +4226,7 @@
 
 		/**
 		 * 系列共通の設定情報をセットします
-		 * 
+		 *
 		 * @param {Object} obj 系列共通の設定オブジェクト
 		 * @memberOf h5.ui.components.chart.ChartController
 		 */
@@ -4246,7 +4248,7 @@
 
 		/**
 		 * 軸の設定をセットします
-		 * 
+		 *
 		 * @param{Object} axesSettings 軸の設定
 		 */
 		setAxesSetting: function(axesSettings) {
