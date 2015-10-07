@@ -1385,8 +1385,6 @@
 				// ローソク情報を計算する
 				var chartItem = this.createChartDataItem(addedData);
 
-				this.getXLabelArray();
-
 				// チャートのローソクを更新する
 				var dispDataSize = this.chartSetting.get('dispDataSize');
 				if (removedItemId == null) {
@@ -1399,6 +1397,9 @@
 					this.chartDataSource.remove(removedItemId);
 					this._removeChartElm(removedItemId);
 				}
+
+				this.getXLabelArray();
+
 				this._appendChart([chartItem]);
 			},
 
@@ -1613,7 +1614,10 @@
 					this.xLabelArray.copyFrom([]);
 				}
 
-				var rightItemId = this.chartDataSource.dataSource.sequence.current() - 1;
+				var rightItemId = this.chartDataSource.toId;
+				if (rightItemId == null) {
+					rightItemId = this.chartDataSource.dataSource.sequence.current() - 1 ;
+				}
 
 				var dispSizeNum = this.chartSetting.get('dispDataSize');
 
@@ -2998,7 +3002,10 @@
 					this.xLabelArray.copyFrom([]);
 				}
 
-				var rightItemId = this.chartDataSource.dataSource.sequence.current() - 1;
+				var rightItemId = this.chartDataSource.toId;
+				if (rightItemId == null) {
+					rightItemId = this.chartDataSource.dataSource.sequence.current() - 1 ;
+				}
 
 				var startId = rightItemId - dispSizeNum + 1;
 				for (var i = 0; i < dispSizeNum; i++) {
@@ -3871,10 +3878,12 @@
 			for ( var name in this._updateLog) {
 				var renderer = this._renderers[name];
 
-				var addedData = this._updateLog[name].add[0];
-				var maxAndMinVals = renderer.chartDataSource.getMaxAndMinValsOf(addedData);
-				addedMax = Math.max(addedMax, maxAndMinVals.maxVal);
-				addedMin = Math.min(addedMin, maxAndMinVals.minVal);
+				if (this._updateLog[name].add.length != 0) {
+					var addedData = this._updateLog[name].add[0];
+					var maxAndMinVals = renderer.chartDataSource.getMaxAndMinValsOf(addedData);
+					addedMax = Math.max(addedMax, maxAndMinVals.maxVal);
+					addedMin = Math.min(addedMin, maxAndMinVals.minVal);
+				}
 
 				if (this._updateLog[name].remove.length != 0) {
 					var removedData = this._updateLog[name].remove[0];
