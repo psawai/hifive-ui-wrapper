@@ -4296,8 +4296,8 @@
 				if (skip) {
 					continue;
 				}
-
-				stackedVal += renderer.chartDataSource.getDataObj(id)[propName];
+				
+				stackedVal += this._renderers[series.name].chartDataSource.getDataObj(id)[propName];
 			}
 
 			var ret = {};
