@@ -67,30 +67,6 @@
 		},
 
 		/**
-		 * 積み上げた値を取得します
-		 *
-		 * @param {Number} id 積み上げるデータのID
-		 * @param {Number} yProp y軸方向のデータのオブジェクト内のプロパティ名
-		 * @param {Number} number 所属する系列の番号
-		 * @returns {Object} idと積み上げた値を持つオブジェクト
-		 * @memberOf DataSourceManager
-		 */
-		getStackedData: function(id, yProp, number) {
-			var stackedVal = 0;
-			for ( var name in this._map) {
-				var dataSource = this._map[name];
-				if (dataSource.number < number) {
-					stackedVal += dataSource.get(id)[yProp];
-				}
-			}
-
-			var ret = {};
-			ret.id = id;
-			ret[yProp] = stackedVal;
-			return ret;
-		},
-
-		/**
 		 * データソースを生成します
 		 *
 		 * @param {Object} params 系列の設定情報
@@ -422,17 +398,6 @@
 		},
 
 		/**
-		 * 積み上げでの対応するデータオブジェクトを取得します
-		 *
-		 * @param {DataItem} item 対応するデータアイテム
-		 * @returns {Object} 積み上げた結果のデータオブジェクト
-		 * @memberOf DataSource
-		 */
-		getStackedData: function(id, yProp) {
-			return this.manager.getStackedData(id, yProp, this.number);
-		},
-
-		/**
 		 * 描画範囲内の最大値と最小値を取得します
 		 *
 		 * @param {Number} rightEndId 描画範囲の右端のID
@@ -705,10 +670,11 @@
 	 * @param {DataSource} dataSource データソース
 	 * @param {Object} seriesSetting 系列の設定
 	 * @param {ChartSetting} chartSetting チャート全体の設定
+	 * @param {ChartRenderer} renderer チャートレンダラ―
 	 * @class ChartDataSource
 	 */
-	function ChartDataSource(dataSource, seriesSetting, chartSetting) {
-		this._init(dataSource, seriesSetting, chartSetting);
+	function ChartDataSource(dataSource, seriesSetting, chartSetting, renderer) {
+		this._init(dataSource, seriesSetting, chartSetting, renderer);
 	}
 
 	ChartDataSource.prototype = {
@@ -721,11 +687,12 @@
 		 */
 		own: own,
 
-		_init: function(dataSource, seriesSetting, chartSetting) {
+		_init: function(dataSource, seriesSetting, chartSetting, renderer) {
 
 			this.dataSource = dataSource;
 			this.name = dataSource.name;
 			this.seriesSetting = seriesSetting;
+			this.renderer = renderer;
 			this._chartSetting = chartSetting;
 
 			this.xLabelArray = null;
@@ -1018,7 +985,7 @@
 			if ($.inArray(this._type, STACKED_CHART_TYPES) === -1) {
 				return obj[propName];
 			}
-			var stackedData = this.dataSource.getStackedData(obj.id, propName);
+			var stackedData = this.renderer.getStackedData(obj.id, propName);
 			return obj[propName] + stackedData[propName];
 		},
 
@@ -1104,8 +1071,8 @@
 
 	h5.mixin.eventDispatcher.mix(ChartDataSource.prototype);
 
-	function RadarChartDataSource(dataSource, seriesSetting, chartSetting) {
-		this._init(dataSource, seriesSetting, chartSetting);
+	function RadarChartDataSource(dataSource, seriesSetting, chartSetting, renderer) {
+		this._init(dataSource, seriesSetting, chartSetting, renderer);
 		this._radius = calcDefaultRadius(this._chartSetting);
 	}
 
@@ -1165,8 +1132,8 @@
 	RadarChartDataSource.prototype = $.extend({}, ChartDataSource.prototype, radarChartDataSource);
 
 
-	function ArcChartDataSource(dataSource, seriesSetting, chartSetting) {
-		this._init(dataSource, seriesSetting, chartSetting);
+	function ArcChartDataSource(dataSource, seriesSetting, chartSetting, renderer) {
+		this._init(dataSource, seriesSetting, chartSetting, renderer);
 		this._radius = calcDefaultRadius(this._chartSetting);
 	}
 
@@ -1198,15 +1165,15 @@
 
 	ArcChartDataSource.prototype = $.extend({}, RadarChartDataSource.prototype, arcChartDataSource);
 
-	function createChartDataSource(dataSource, seriesSetting, chartSetting) {
+	function createChartDataSource(dataSource, seriesSetting, chartSetting, renderer) {
 		if (seriesSetting.type === 'radar') {
-			return new RadarChartDataSource(dataSource, seriesSetting, chartSetting);
+			return new RadarChartDataSource(dataSource, seriesSetting, chartSetting, renderer);
 		}
 		if (seriesSetting.type === 'arc') {
-			return new ArcChartDataSource(dataSource, seriesSetting, chartSetting);
+			return new ArcChartDataSource(dataSource, seriesSetting, chartSetting, renderer);
 		}
 
-		return new ChartDataSource(dataSource, seriesSetting, chartSetting);
+		return new ChartDataSource(dataSource, seriesSetting, chartSetting, renderer);
 	}
 
 	// チャートレンダラ―の定義
@@ -1243,9 +1210,10 @@
 	 * @param {Object} chartSetting 設定
 	 * @param {Object} seriesSetting この種別の設定
 	 * @param {Object} prototype 系列ごとに拡張するプロトタイプ
+	 * @param {Controller} controller この系列が所属するcontroller
 	 * @returns {ChartRenderer}
 	 */
-	function createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, prototype) {
+	function createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, controller, prototype) {
 
 		/**
 		 * チャートレンダラ―の基底クラス
@@ -1256,12 +1224,13 @@
 		 * @param {Object} seriesSetting この種別の設定
 		 * @param {Object} prototype 系列ごとに拡張するプロトタイプ
 		 */
-		function ChartRendererBase(rootElement, dataSource, chartSetting, seriesSetting) {
-			this.chartDataSource = createChartDataSource(dataSource, seriesSetting, chartSetting);
+		function ChartRendererBase(rootElement, dataSource, chartSetting, seriesSetting, controller) {
+			this.chartDataSource = createChartDataSource(dataSource, seriesSetting, chartSetting, this);
 			this.name = this.chartDataSource.name;
 			this.chartSetting = chartSetting;
 			this.rootElement = rootElement;
 			this.seriesSetting = seriesSetting;
+			this.chartController = controller;
 			this.isReadyToAdd = false;
 
 			if (!graphicRenderer.isSvg) {
@@ -1385,8 +1354,6 @@
 				// ローソク情報を計算する
 				var chartItem = this.createChartDataItem(addedData);
 
-				this.getXLabelArray();
-
 				// チャートのローソクを更新する
 				var dispDataSize = this.chartSetting.get('dispDataSize');
 				if (removedItemId == null) {
@@ -1399,6 +1366,9 @@
 					this.chartDataSource.remove(removedItemId);
 					this._removeChartElm(removedItemId);
 				}
+
+				this.getXLabelArray();
+
 				this._appendChart([chartItem]);
 			},
 
@@ -1613,7 +1583,10 @@
 					this.xLabelArray.copyFrom([]);
 				}
 
-				var rightItemId = this.chartDataSource.dataSource.sequence.current() - 1;
+				var rightItemId = this.chartDataSource.toId;
+				if (rightItemId == null) {
+					rightItemId = this.chartDataSource.dataSource.sequence.current() - 1 ;
+				}
 
 				var dispSizeNum = this.chartSetting.get('dispDataSize');
 
@@ -1639,11 +1612,15 @@
 
 				return h5format('m {0} {1} l {2} {3} {4} {5} {6} {7} {8} {9} e', left, top, right,
 						top, right, bottom, left, bottom, left, top);
+			},
+
+			getStackedData: function(id, propName) {
+				return this.chartController.getStackedData(id, propName, this);
 			}
 		};
 
 		$.extend(ChartRendererBase.prototype, prototype);
-		return new ChartRendererBase(rootElement, dataSource, chartSetting, seriesSetting);
+		return new ChartRendererBase(rootElement, dataSource, chartSetting, seriesSetting, controller);
 	}
 
 	/**
@@ -1654,9 +1631,10 @@
 	 * @param {DataSource} dataSource このラインチャートのデータソース
 	 * @param {Object} chartSetting 設定
 	 * @param {Object} seriesSetting この種別の設定
+	 * @param {Controller} controller この系列が属するコントローラ
 	 * @returns CandleStickChartRenderer
 	 */
-	function createCandleStickChartRenderer(rootElement, dataSource, chartSetting, seriesSetting) {
+	function createCandleStickChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, controller) {
 		/**
 		 * ローソクチャートのレンダラ―
 		 */
@@ -2013,7 +1991,7 @@
 			}
 		};
 
-		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting,
+		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, controller,
 				CandleStickChartRenderer);
 	}
 
@@ -2025,9 +2003,10 @@
 	 * @param {DataSource} dataSource このラインチャートのデータソース
 	 * @param {Object} chartSetting 設定
 	 * @param {Object} seriesSetting この種別の設定
+	 * @param {Controller} controller この系列が属するcontroller
 	 * @returns LineChartRenderer
 	 */
-	function createLineChartRenderer(rootElement, dataSource, chartSetting, seriesSetting) {
+	function createLineChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, controller) {
 
 		/**
 		 * ラインチャートレンダラ―
@@ -2293,8 +2272,8 @@
 				var fromY = isPoint ? dataObj[yProp] : pre[yProp];
 
 				if ($.inArray(this.seriesSetting.type, STACKED_CHART_TYPES) !== -1) {
-					fromY += this.chartDataSource.dataSource.getStackedData(pre.id, yProp)[yProp];
-					toY += this.chartDataSource.dataSource.getStackedData(dataObj.id, yProp)[yProp];
+					fromY += this.chartController.getStackedData(pre.id, yProp, this)[yProp];
+					toY += this.chartController.getStackedData(dataObj.id, yProp, this)[yProp];
 				}
 
 				var dx = this.chartSetting.get('dx');
@@ -2400,7 +2379,7 @@
 			// ラインチャートではハイライトする対象がない
 			}
 		};
-		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting,
+		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, controller,
 				lineChartRenderer);
 	}
 
@@ -2412,9 +2391,10 @@
 	 * @param {DataSource} dataSource このラインチャートのデータソース
 	 * @param {Object} chartSetting 設定
 	 * @param {Object} seriesSetting この種別の設定
+	 * @param {Controller} controller この系列が属するコントローラ
 	 * @returns BarChartRenderer
 	 */
-	function createBarChartRenderer(rootElement, dataSource, chartSetting, seriesSetting) {
+	function createBarChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, controller) {
 		/**
 		 * バーチャートのレンダラ―
 		 */
@@ -2508,7 +2488,7 @@
 
 				var stackedVal = 0;
 				if ($.inArray(this.seriesSetting.type, STACKED_CHART_TYPES) !== -1) {
-					stackedVal += this.chartDataSource.dataSource.getStackedData(dataObj.id, yProp)[yProp];
+					stackedVal += this.chartController.getStackedData(dataObj.id, yProp, this)[yProp];
 					y += stackedVal;
 				}
 
@@ -2607,7 +2587,7 @@
 			}
 		};
 
-		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting,
+		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, controller,
 				barChartRenderer);
 	}
 
@@ -2623,9 +2603,10 @@
 	 * @param {DataSource} dataSource このラインチャートのデータソース
 	 * @param {Object} chartSetting 設定
 	 * @param {Object} seriesSetting この種別の設定
+	 * @param {Controller} controller この系列が属するコントローラ
 	 * @returns PieChartRenderer
 	 */
-	function createPieChartRenderer(rootElement, dataSource, chartSetting, seriesSetting) {
+	function createPieChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, controller) {
 		/**
 		 * パイチャートのレンダラ―
 		 */
@@ -2826,7 +2807,7 @@
 			}
 		};
 
-		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting,
+		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, controller,
 				pieChartRenderer);
 	}
 
@@ -2838,9 +2819,10 @@
 	 * @param {DataSource} dataSource このラインチャートのデータソース
 	 * @param {Object} chartSetting 設定
 	 * @param {Object} seriesSetting この種別の設定
+	 * @param {Controller} controller この系列が属するコントローラ
 	 * @returns RadarChartRenderer
 	 */
-	function createRadarChartRenderer(rootElement, dataSource, chartSetting, seriesSetting) {
+	function createRadarChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, controller) {
 		/**
 		 * パイチャートのレンダラ―
 		 */
@@ -2998,7 +2980,10 @@
 					this.xLabelArray.copyFrom([]);
 				}
 
-				var rightItemId = this.chartDataSource.dataSource.sequence.current() - 1;
+				var rightItemId = this.chartDataSource.toId;
+				if (rightItemId == null) {
+					rightItemId = this.chartDataSource.dataSource.sequence.current() - 1 ;
+				}
 
 				var startId = rightItemId - dispSizeNum + 1;
 				for (var i = 0; i < dispSizeNum; i++) {
@@ -3013,7 +2998,7 @@
 			}
 		};
 
-		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting,
+		return createChartRenderer(rootElement, dataSource, chartSetting, seriesSetting, controller,
 				radarChartRenderer);
 	}
 
@@ -3871,10 +3856,12 @@
 			for ( var name in this._updateLog) {
 				var renderer = this._renderers[name];
 
-				var addedData = this._updateLog[name].add[0];
-				var maxAndMinVals = renderer.chartDataSource.getMaxAndMinValsOf(addedData);
-				addedMax = Math.max(addedMax, maxAndMinVals.maxVal);
-				addedMin = Math.min(addedMin, maxAndMinVals.minVal);
+				if (this._updateLog[name].add.length != 0) {
+					var addedData = this._updateLog[name].add[0];
+					var maxAndMinVals = renderer.chartDataSource.getMaxAndMinValsOf(addedData);
+					addedMax = Math.max(addedMax, maxAndMinVals.maxVal);
+					addedMin = Math.min(addedMin, maxAndMinVals.minVal);
+				}
 
 				if (this._updateLog[name].remove.length != 0) {
 					var removedData = this._updateLog[name].remove[0];
@@ -3960,26 +3947,26 @@
 			switch (seriesOption.type.toLowerCase()) {
 			case 'ohlc':
 				this._renderers[name] = createCandleStickChartRenderer(g, dataSource,
-						this.chartSetting, seriesOption);
+						this.chartSetting, seriesOption, this);
 				break;
 			case 'stacked_line':
 			case 'line':
 				this._renderers[name] = createLineChartRenderer(g, dataSource, this.chartSetting,
-						seriesOption);
+						seriesOption, this);
 				break;
 			case 'bar':
 			case 'stacked_bar':
 				this._renderers[name] = createBarChartRenderer(g, dataSource, this.chartSetting,
-						seriesOption);
+						seriesOption, this);
 				break;
 			case 'pie':
 				this._renderers[name] = createPieChartRenderer(g, dataSource, this.chartSetting,
-						seriesOption);
+						seriesOption, this);
 				break;
 			case 'radar':
 			case 'arc':
 				this._renderers[name] = createRadarChartRenderer(g, dataSource, this.chartSetting,
-						seriesOption);
+						seriesOption, this);
 				break;
 			default:
 				break;
@@ -4081,9 +4068,12 @@
 		 */
 		addSeries: function(series) {
 			var thisSeries = this.settings.series;
+			for (var i = 0, len = series.length; i < len; i++) {
+				thisSeries.push(series[i]);
+			}
+
 			this._addSeriesWithAsync(series).done(this.own(function() {
 				for (var i = 0, len = series.length; i < len; i++) {
-					thisSeries.push(series[i]);
 					var renderer = this._renderers[series[i].name];
 					if (this._rendererQueue.length === 0) {
 						// 描画中のものがなければ描画を開始する。
@@ -4286,6 +4276,34 @@
 				};
 			}
 			this.chartSetting.set(maxAndMinVals);
+		},
+
+		getStackedData: function(id, propName, renderer) {
+			var type = renderer.seriesSetting.type;
+			var skip = true;
+			var stackedVal = 0;
+			for (var i = this.settings.series.length - 1; i >= 0; i--) {
+				var series = this.settings.series[i];
+				if (type  !== series.type) {
+					continue;
+				}
+
+				if (series.name === renderer.name) {
+					skip = false;
+					continue;
+				}
+
+				if (skip) {
+					continue;
+				}
+				
+				stackedVal += this._renderers[series.name].chartDataSource.getDataObj(id)[propName];
+			}
+
+			var ret = {};
+			ret.id = id;
+			ret[propName] = stackedVal;
+			return ret;
 		},
 
 		// １系列の描画が完了するごとに上がるイベント。次の系列の描画を開始する
