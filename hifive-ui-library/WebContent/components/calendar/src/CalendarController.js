@@ -296,7 +296,7 @@
 							borderBottomWidth: option.borderSize,
 							borderLeftWidth: (row > 0 || (!row && !col)) ? option.borderSize : 0,
 							borderRightWidth: (row > 0 || (!row && col == 6)) ? option.borderSize
-									: 0,
+									: 0
 						});
 					} else {
 						var specialData = '';
@@ -329,7 +329,7 @@
 							width: option.cellWidth,
 							height: option.cellHeight,
 							lineHeight: option.cellHeight / 3 + 'px',
-							borderWidth: option.borderSize,
+							borderWidth: option.borderSize
 						});
 					}
 
@@ -412,7 +412,7 @@
 			var $title = $('<tr/>').css({
 				height: this._option.cellHeight,
 				lineHeight: this._option.cellHeight + 'px',
-				borderWidth: this._option.borderSize,
+				borderWidth: this._option.borderSize
 			});
 			$title.addClass(this._coreCssClass);
 

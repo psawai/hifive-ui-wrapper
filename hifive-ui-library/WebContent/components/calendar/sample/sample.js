@@ -26,7 +26,7 @@ $(function(){
 		__meta : {
 			calendarController: {
 				rootElement: '#container'
-			},
+			}
 		},
 
 		__init: function(context){
@@ -120,7 +120,7 @@ $(function(){
 			for (var i=0; i<dates.length; i++) {
 				this.calendarController.setTooltip(dates[i], data);
 			}
-		},
+		}
 	};
 
 	h5.core.controller('#body', mainController);
