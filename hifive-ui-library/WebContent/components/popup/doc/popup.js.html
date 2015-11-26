@@ -1,4 +1,47 @@
-/*
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: popup.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+
+    <script src="scripts/jquery.js"> </script>
+    <script src="scripts/extension.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-custom.css">
+</head>
+
+<body>
+<div id="container">
+	<nav>
+		<div class="module-search-header">
+			<div class="h5-searchBox">
+				<input type="text" placeholder="Search...">
+				<button class="clear">×</button>
+			</div>
+		</div>
+		<div class="module-nav show"><a href="" class="show-modules">一覧</a></div>
+		<div class="module-nav hide"><a href="" class="hide-modules">一覧</a></div>
+		<div class="module-list-wrapper hidden-mobile">
+		    <h3>Classes</h3><ul><li><a href="Popup.html">Popup</a></li></ul><h3>Namespaces</h3><ul><li><a href="h5.ui.popupManager.html">h5.ui.popupManager</a></li></ul>
+	    </div>
+	</nav>
+	<div id="main">
+	    <h1 class="page-title">Source: popup.js</h1>
+	    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/*
  * Copyright (C) 2013-2014 NS Solutions Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,10 +64,10 @@
 	h5.core.view
 			.register(
 					POPUP_HEADER_TEMPLATE_ID,
-					'<div class="popupHeader"><h1></h1><div class="popupCloseBtn btn btn-danger"><span class="icon-remove">[%= h5.env.ua.isIE && h5.env.ua.browserVersion < 9 ? "×" : ""  %]</span></div></div>');
+					'&lt;div class="popupHeader">&lt;h1>&lt;/h1>&lt;div class="popupCloseBtn btn btn-danger">&lt;span class="icon-remove">[%= h5.env.ua.isIE &amp;&amp; h5.env.ua.browserVersion &lt; 9 ? "×" : ""  %]&lt;/span>&lt;/div>&lt;/div>');
 
 	/** ポップアップのコンテンツ */
-	var POPUP_CONTENTS = '<div class="popupContents">';
+	var POPUP_CONTENTS = '&lt;div class="popupContents">';
 	/** オーバレイのクラス */
 	var CLASS_OVERLAY = 'h5PopupOverlay';
 
@@ -173,7 +216,7 @@
 		if ($('.' + CLASS_OVERLAY).length) {
 			return;
 		}
-		var overlay = $('<div>').addClass(CLASS_OVERLAY);
+		var overlay = $('&lt;div>').addClass(CLASS_OVERLAY);
 		$(document.body).append(overlay);
 		// bodyの大きさがwindowより小さかったらwindowに合わせる
 		overlay.css({
@@ -188,12 +231,12 @@
 
 	/**
 	 * ポップアップ
-	 * <p>
+	 * &lt;p>
 	 * {@link h5.ui.popupManager.createPopup}の戻り値がこのPopupクラスです
-	 * </p>
-	 * <p>
+	 * &lt;/p>
+	 * &lt;p>
 	 * ポップアップの表示・非表示などはこのクラスのメソッドを使って行います
-	 * </p>
+	 * &lt;/p>
 	 *
 	 * @class
 	 * @name Popup
@@ -237,9 +280,9 @@
 
 		/**
 		 * ポップアップが閉じられることを待機するプロミス
-		 * <p>
+		 * &lt;p>
 		 * ポップアップが閉じられたときにこのプロミスで登録したdoneハンドラが実行されます。
-		 * </p>
+		 * &lt;/p>
 		 *
 		 * @memberOf Popup
 		 * @type {Promise}
@@ -368,9 +411,9 @@
 
 				/**
 				 * ポップアップを削除する
-				 * <p>
+				 * &lt;p>
 				 * ポップアップを削除します。削除するとポップアップからpopupClosedイベントが発生します
-				 * </p>
+				 * &lt;/p>
 				 *
 				 * @memberOf Popup
 				 * @param {Any} [args] popupClosedイベントで渡される引数オブジェクトです
@@ -400,9 +443,9 @@
 
 				/**
 				 * ポップアップのサイズを取得
-				 * <p>
+				 * &lt;p>
 				 * ポップアップの高さ(height)と幅(width)を持ったオブジェクトを返します
-				 * </p>
+				 * &lt;/p>
 				 *
 				 * @memberOf Popup
 				 * @returns {Object} width,heigthを持つオブジェクト
@@ -453,9 +496,9 @@
 
 				/**
 				 * コンテンツのサイズを取得
-				 * <p>
+				 * &lt;p>
 				 * コンテンツの高さ(height)と幅(width)を持ったオブジェクトを返します
-				 * </p>
+				 * &lt;/p>
 				 *
 				 * @memberOf Popup
 				 * @returns {Object} width,heigthを持つオブジェクト
@@ -470,12 +513,12 @@
 
 				/**
 				 * ポップアップのコンテンツを設定
-				 * <p>
+				 * &lt;p>
 				 * ポップアップのコンテンツとなるhtmlと、コンテンツエリアにバインドするコントローラを指定します。
-				 * </p>
-				 * <p>
+				 * &lt;/p>
+				 * &lt;p>
 				 * コントローラの指定は任意です。
-				 * </p>
+				 * &lt;/p>
 				 *
 				 * @memberOf Popup
 				 * @param {string|DOM|jQuery} contents
@@ -489,7 +532,7 @@
 						// contentsが文字列の場合はhtmlで追加
 						$(this.contents).html(contents);
 					} else if (contents
-							&& (contents instanceof $ || typeof contents.nodeType === 'number')) {
+							&amp;&amp; (contents instanceof $ || typeof contents.nodeType === 'number')) {
 						// コンテンツがjQueryオブジェクトまたはDOMオブジェクトの場合はappend
 						$(this.contents).html($(contents).clone());
 					}
@@ -518,12 +561,12 @@
 
 				/**
 				 * ポップアップの表示位置を設定
-				 * <p>
+				 * &lt;p>
 				 * 第1引数で、表示位置を文字列で指定できます。使用できる文字列はtop/mid/bottomおよびleft/center/rightです。top-leftのような指定も可能です。
-				 * </p>
-				 * <p>
+				 * &lt;/p>
+				 * &lt;p>
 				 * 第2引数は、top,leftの指定されたオブジェクトで位置を指定します。
-				 * </p>
+				 * &lt;/p>
 				 *
 				 * @memberOf Popup
 				 * @param {string} constraint
@@ -563,9 +606,9 @@
 
 				/**
 				 * ポップアップの位置のリフレッシュ
-				 * <p>
+				 * &lt;p>
 				 * ポップアップの位置を現在設定済みの位置に移動します
-				 * </p>
+				 * &lt;/p>
 				 *
 				 * @memberOf Popup
 				 */
@@ -579,7 +622,7 @@
 					var controllers = h5.core.controllerManager.getControllers(this.rootElement, {
 						deep: true
 					});
-					for (var i = 0, len = controllers.length; i < len; i++) {
+					for (var i = 0, len = controllers.length; i &lt; len; i++) {
 						controllers[i].dispose();
 					}
 					this._controller = null;
@@ -588,12 +631,12 @@
 
 	/**
 	 * ポップアップを作成
-	 * <p>
+	 * &lt;p>
 	 * 作成した時点では表示されません。
-	 * </p>
-	 * <p>
+	 * &lt;/p>
+	 * &lt;p>
 	 * 第1引数にはグループ名を指定します。グループ名は同じグループのポップアップは同時に1つだけ存在します。 (同一グループのものを開くと、現在開いているものが消えます。)
-	 * </p>
+	 * &lt;/p>
 	 *
 	 * @memberOf h5.ui.popupManager
 	 * @param {string} group グループ名
@@ -610,7 +653,7 @@
 		var actualParam = $.extend({}, popupDefaultParam, param);
 
 		// z-indexはcssで指定してある
-		var elem = $('<div class="h5Popup">').css({
+		var elem = $('&lt;div class="h5Popup">').css({
 			position: actualParam.position,
 			visibility: 'hidden'
 		})[0];
@@ -631,9 +674,9 @@
 
 	/**
 	 * 指定したグループのポップアップのインスタンスを取得します
-	 * <p>
+	 * &lt;p>
 	 * 第1引数にグループ名を指定します。
-	 * </p>
+	 * &lt;/p>
 	 *
 	 * @memberOf h5.ui.popupManager
 	 * @param {string} group
@@ -651,4 +694,23 @@
 		createPopup: createPopup,
 		getPopup: getPopup
 	});
-})(jQuery);
+})(jQuery);</code></pre>
+        </article>
+    </section>
+
+
+
+
+	</div>
+
+	<br class="clear">
+
+	<footer>
+	    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.2</a> on Thu Nov 26 2015 17:42:56 GMT+0900 (JST)
+	</footer>
+</div>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
