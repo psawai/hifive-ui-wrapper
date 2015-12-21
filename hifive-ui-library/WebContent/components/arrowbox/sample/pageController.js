@@ -26,7 +26,7 @@
 		 *
 		 * @memberOf sample.PageController
 		 */
-		__templates: '../src/arrowbox.ejs',
+//		__templates: '../src/arrowbox.ejs',
 
 		/**
 		 * ArrowBoxControllerを子コントローラとして定義する
