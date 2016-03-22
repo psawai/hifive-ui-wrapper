@@ -239,3 +239,22 @@
 .gridFilterMenuOverlay {
 	background-color: rgba(0, 0, 0, 0.1);
 }
+
+/*---------- 行移対象列 ----------*/
+.gridCellFrame.trackingRow {
+    background-color: rgba(255, 255, 0, 0.2);
+}
+
+/*---------- 行移動時に表示する矢印 ----------*/
+.rowInsertIcon {
+	height: 0;
+	width: 0;
+	margin-left: 1px;
+	border-style: solid;
+	border-top-width: 6px;
+	border-left-width: 6px;
+	border-top-color: transparent;
+	border-right-style: hidden;
+	border-bottom-color: transparent;
+	border-bottom-width: 6px;
+}

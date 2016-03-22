@@ -17414,6 +17414,12 @@
 	var COLUMN_SORT_AND_FILTER_SORT_PROPERTY_DATA_NAME = 'gridSortProperty';
 
 
+	// --- MoveRowUI --- //
+	
+	var TRACKING_ROW_CLASS = 'trackingRow';
+	var INSERT_ROW_ICON_CLASS = 'rowInsertIcon';
+
+
 	// --- Table Grid View  --- //
 
 	var VERTICAL_SCROLL_BAR_CLASS = 'gridVerticalScrollBar';
@@ -19948,6 +19954,162 @@
 		}
 	};
 
+	//=============================
+	// MoveRowUIController
+	//=============================
+
+	var moveRowUIController = {
+
+		// --- Metadata --- //
+
+		/**
+		 * @memberOf MoveRowUIController
+		 */
+		__name: 'h5.ui.components.datagrid.view.dom.MoveRowUIController',
+
+		// --- Life Cycle Method --- //
+
+		__init: function() {
+			if(this._findInsertIcon().length !== 0) {
+				return;
+			}
+
+			var $insertIcon = $('<div></div>');
+			$insertIcon.addClass(INSERT_ROW_ICON_CLASS).css({
+				display: 'none'
+			});
+
+			$insertIcon.appendTo(document.body);
+		},
+
+		// --- Public Method --- //
+		
+		isMoving: function() {
+			return this._isMoving;
+		},
+
+		// --- Event Handler --- //
+
+		'.gridHeaderColumn h5trackstart': function(context, $el) {
+			if ($el.closest('.gridHeaderTopLeftBox').length !== 0) {
+				return;
+			}
+
+			this._selectedId = $el.attr('data-h5-dyn-grid-data-id');
+			this._trackmoveId = null;
+			this._updateRowsPosArray();
+		},
+
+		'.gridHeaderColumn h5trackmove': function(context, $el) {
+			if ($el.closest('.gridHeaderTopLeftBox').length !== 0) {
+				return;
+			}
+
+			this._isMoving = true;
+			this._findCellFrame(this._selectedId).addClass(TRACKING_ROW_CLASS);
+
+			if(context.event.pageY == undefined) {
+				return;
+			}
+			var targetId = this._getClosestId(context.event.pageY);
+			this._trackmoveId = targetId;
+
+			var $target = this._findRowHeader(targetId);
+			var offset;
+			if ($target === null) {
+				var posArray = this._rowsPosArray;
+				$target = this._findRowHeader(posArray[posArray.length - 1].id);
+				offset = $target.offset();
+				offset.top += $target.height();
+			} else {
+				offset = $target.offset();
+			}
+
+			this._findInsertIcon().offset({
+				left: offset.left - 6,
+				top: offset.top - 6
+			}).show();
+		},
+
+		'.gridHeaderColumn h5trackend': function(context) {
+			this._findInsertIcon().offset({
+				left: 0,
+				top: 0
+			}).hide();
+
+			this._findCellFrame(this._selectedId).removeClass(TRACKING_ROW_CLASS);
+			if (this._selectedId === null) {
+				return;
+			}
+
+			if (!this._isMoving) {
+				return;
+			}
+
+			this._isMoving = false;
+			var id = this._getClosestId(context.event.pageY);
+			this._moveColumn(id);
+		},
+
+		// --- Property --- //
+
+		_isMoving: false,
+
+		_selectedId: null,
+
+		_rowsPosArray: null,
+
+		_trackmoveId: null,
+
+		// --- Private Method --- //
+
+		_updateRowsPosArray: function() {
+			var $tr = this.$find('.gridHeaderColumnsBox tr');
+			this._rowsPosArray = $tr.map(function(i, element) {
+				return {
+					id: $(element.firstChild).children().attr('data-h5-dyn-grid-data-id'),
+					top: $(element).offset().top,
+					height: $(element).height()
+				};
+			}).get();
+		},
+
+		_getClosestId: function(pageY) {
+			var posArray = this._rowsPosArray;
+			for (var i = 0, len = posArray.length; i < len; i++) {
+				var pos = posArray[i];
+				if (pageY < pos.top + pos.height) {
+					return pos.id;
+				}
+			}
+			return 0;
+		},
+
+		_findRowHeader: function(id) {
+			if(id === 0) {
+				return null;
+			}
+
+			var selector = '.gridHeaderColumn[data-h5-dyn-grid-data-id=' + id + '][data-h5-dyn-grid-column="0"]';
+			return this.$find(selector);
+		},
+
+		_findCellFrame: function(id) {
+			var selector = '.gridCellFrame[data-h5-dyn-grid-data-id=' + id + ']';
+			return this.$find(selector);
+		},
+
+		_findInsertIcon: function() {
+			return $('.' + INSERT_ROW_ICON_CLASS);
+		},
+
+		_moveColumn: function(targetId) {
+			this.trigger('h5gridMoveRow', {
+				from: this._selectedId,
+				to: targetId
+			});
+		}
+	}
 
 	//=============================
 	// TableGridViewController
@@ -20004,6 +20166,7 @@
 
 		_columnSortAndFilterUIController: columnSortAndFilterUIController,
 
+		_moveRowUIController: moveRowUIController,
 
 		// --- Logic --- //
 
@@ -20528,6 +20691,10 @@
 				return;
 			}
 
+			if (this._moveRowUIController.isMoving()) {
+				return;
+			}
+
 			var headerRows = this._gridLogic.getHeaderRows();
 			var headerColumns = this._gridLogic.getHeaderColumns();
 
@@ -20660,6 +20827,74 @@
 
 		'{this._gridLogic} refreshSearchComplete': function() {
 			this.refresh();
+		},
+
+		/**
+		 * 行表示位置を調整します。
+		 * 
+		 * @param context
+		 * @param $el
+		 * @memberOf h5.ui.components.datagrid.TableGridViewController
+		 */
+		'{rootElement} h5gridMoveRow': function(context) {
+			context.event.stopPropagation();
+
+			// 移動元の行
+			var from = context.evArg.from;
+			// 目標の移動位置
+			var to = context.evArg.to;
+			if(from === to) {
+				return;
+			}
+
+			// TODO dataSearcher中の_cacheの取得方法?
+			var array = this._gridLogic.getDataSearcher()._cache;
+			var newArray = [];
+			var targetRow;
+
+			if(to === 0) {
+				// グリッドの最後に移動する
+				for(var i = 0, len = array.length; i < len; i++) {
+					if(array[i].dataId === from) {
+						targetRow = array[i];
+					} else {
+						newArray.push(array[i]);
+					}
+				}
+				newArray.push(targetRow);
+				// TODO dataSearcher中の_cacheの設定方法?
+				this._gridLogic.getDataSearcher()._cache = newArray;
+			} else {
+				var fromIndex;
+				var toIndex;
+				for(var i = 0, len = array.length; i < len; i++) {
+					if(array[i].dataId === from) {
+						fromIndex = i;
+						targetRow = array[i];
+					} else if(array[i].dataId === to) {
+						newArray.push({});
+						toIndex = i;
+						newArray.push(array[i]);
+					} else {
+						newArray.push(array[i]);
+					}
+				}
+
+				if(fromIndex < toIndex) {
+					newArray[toIndex - 1] = targetRow;
+				} else {
+					newArray[toIndex] = targetRow;
+				}
+				// TODO dataSearcher中の_cacheの設定方法?
+				this._gridLogic.getDataSearcher()._cache = newArray;
+			}
+
+			// グリッドを再表現する
+			var visibleProperties = this._gridLogic.getVisibleProperties();
+			this._gridLogic.resetVisibleProperties({
+				header: visibleProperties.header,
+				main: visibleProperties.main
+			});
 		},
 
 		// --- Private Property --- //
