@@ -10352,6 +10352,41 @@
 				throw error.NotSupported.createError('Tree');
 			},
 
+			move: function(from, to, isLast) {
+				if(from === to) {
+					return;
+				}
+
+				var array = this._cache;
+				var newArray = [];
+				var targetRow = {};
+
+				var fromIndex;
+				var toIndex;
+				for(var i = 0, len = array.length; i < len; i++) {
+					if(array[i].dataId === from) {
+						fromIndex = i;
+						targetRow = array[i];
+					} else if(array[i].dataId === to) {
+						toIndex = i;
+						if(isLast) {
+							newArray.push(array[i]);
+							newArray.push(targetRow);
+						} else {
+							newArray.push(targetRow);
+							newArray.push(array[i]);
+						}
+					} else {
+						newArray.push(array[i]);
+					}
+				}
+
+				if(fromIndex > toIndex) {
+					newArray[toIndex] = targetRow;
+				}
+				this._cache = newArray;
+			},
+
 
 			// --- Private Property --- //
 
@@ -11170,6 +11205,44 @@
 
 			closeTree: function() {
 				throw error.NotSupported.createError('Tree');
+			},
+
+			move: function(from, to, isLast) {
+				if(from === to) {
+					return;
+				}
+
+				var dataSet = this._cacheDataSet;
+				var array = [];
+				var targetRow = {};
+				var fromIndex;
+				var toIndex;
+				for(var i in dataSet) {
+					if(dataSet[i].dataId === from) {
+						fromIndex = i;
+						targetRow = dataSet[i];
+					} else if(dataSet[i].dataId === to) {
+						toIndex = i;
+						if(isLast) {
+							array.push(dataSet[i]);
+							array.push(targetRow);
+						} else {
+							array.push(targetRow);
+							array.push(dataSet[i]);
+						}
+					} else {
+						array.push(dataSet[i]);
+					}
+				}
+
+				if(fromIndex > toIndex) {
+					array[toIndex] = targetRow;
+				}
+				var newDataSet = {};
+				for(var index in array) {
+					newDataSet[index] = array[index];
+				}
+				this._cacheDataSet = newDataSet;
 			},
 
 
@@ -12003,6 +12076,10 @@
 				this.dispatchEvent({
 					type: 'changeSource'
 				});
+			},
+
+			move: function(from, to, isLast) {
+				this._dataSearcher.move(from, to, isLast);
 			},
 
 			// --- Private Property --- //
@@ -20016,13 +20093,9 @@
 
 			var $target = this._findRowHeader(targetId);
 			var offset;
-			if ($target === null) {
-				var posArray = this._rowsPosArray;
-				$target = this._findRowHeader(posArray[posArray.length - 1].id);
-				offset = $target.offset();
+			offset = $target.offset();
+			if (this._isLast) {
 				offset.top += $target.height();
-			} else {
-				offset = $target.offset();
 			}
 
 			this._findInsertIcon().offset({
@@ -20057,6 +20130,8 @@
 
 		_selectedId: null,
 
+		_isLast: false,
+
 		_rowsPosArray: null,
 
 		_trackmoveId: null,
@@ -20076,20 +20151,19 @@
 
 		_getClosestId: function(pageY) {
 			var posArray = this._rowsPosArray;
+			var pos;
 			for (var i = 0, len = posArray.length; i < len; i++) {
-				var pos = posArray[i];
+				pos = posArray[i];
 				if (pageY < pos.top + pos.height) {
+					this._isLast = false;
 					return pos.id;
 				}
 			}
-			return 0;
+			this._isLast = true;
+			return pos.id;
 		},
 
 		_findRowHeader: function(id) {
-			if(id === 0) {
-				return null;
-			}
-
 			var selector = '.gridHeaderColumn[data-h5-dyn-grid-data-id=' + id + '][data-h5-dyn-grid-column="0"]';
 			return this.$find(selector);
 		},
@@ -20106,7 +20180,8 @@
 		_moveColumn: function(targetId) {
 			this.trigger('h5gridMoveRow', {
 				from: this._selectedId,
-				to: targetId
+				to: targetId,
+				isLast: this._isLast
 			});
 		}
 	}
@@ -20843,51 +20918,10 @@
 			var from = context.evArg.from;
 			// 目標の移動位置
 			var to = context.evArg.to;
-			if(from === to) {
-				return;
-			}
+			// 移動位置は可視範囲の最後か
+			var isLast = context.evArg.isLast;
 
-			// TODO dataSearcher中の_cacheの取得方法?
-			var array = this._gridLogic.getDataSearcher()._cache;
-			var newArray = [];
-			var targetRow;
-
-			if(to === 0) {
-				// グリッドの最後に移動する
-				for(var i = 0, len = array.length; i < len; i++) {
-					if(array[i].dataId === from) {
-						targetRow = array[i];
-					} else {
-						newArray.push(array[i]);
-					}
-				}
-				newArray.push(targetRow);
-				// TODO dataSearcher中の_cacheの設定方法?
-				this._gridLogic.getDataSearcher()._cache = newArray;
-			} else {
-				var fromIndex;
-				var toIndex;
-				for(var i = 0, len = array.length; i < len; i++) {
-					if(array[i].dataId === from) {
-						fromIndex = i;
-						targetRow = array[i];
-					} else if(array[i].dataId === to) {
-						newArray.push({});
-						toIndex = i;
-						newArray.push(array[i]);
-					} else {
-						newArray.push(array[i]);
-					}
-				}
-
-				if(fromIndex < toIndex) {
-					newArray[toIndex - 1] = targetRow;
-				} else {
-					newArray[toIndex] = targetRow;
-				}
-				// TODO dataSearcher中の_cacheの設定方法?
-				this._gridLogic.getDataSearcher()._cache = newArray;
-			}
+			this._gridLogic.getDataSearcher().move(from, to, isLast);
 
 			// グリッドを再表現する
 			var visibleProperties = this._gridLogic.getVisibleProperties();
