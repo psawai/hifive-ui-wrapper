@@ -6516,6 +6516,11 @@
 				v.func();
 			});
 
+			v.property('rowMovable', function(v) {
+				v.nullable();
+				v.type('boolean');
+			});
+
 			v.property('propertyUI', function(v) {
 				v.notNull();
 				v.plainObject();
@@ -10352,39 +10357,44 @@
 				throw error.NotSupported.createError('Tree');
 			},
 
-			move: function(from, to, isLast) {
-				if(from === to) {
+			move: function(from, to, isLastRowInView) {
+				if (from === to) {
 					return;
 				}
 
 				var array = this._cache;
-				var newArray = [];
-				var targetRow = {};
 
-				var fromIndex;
-				var toIndex;
-				for(var i = 0, len = array.length; i < len; i++) {
-					if(array[i].dataId === from) {
-						fromIndex = i;
-						targetRow = array[i];
-					} else if(array[i].dataId === to) {
-						toIndex = i;
-						if(isLast) {
-							newArray.push(array[i]);
-							newArray.push(targetRow);
-						} else {
-							newArray.push(targetRow);
-							newArray.push(array[i]);
-						}
+				var fromIndex = this._idToIndex[from];
+				var toIndex = this._idToIndex[to];
+				var targetRow = array[fromIndex];
+
+				if (fromIndex > toIndex) {
+					array.splice(fromIndex, 1);
+					array.splice(toIndex, 0, targetRow);
+				} else {
+					if (isLastRowInView) {
+						array.splice(toIndex + 1, 0, targetRow);
 					} else {
-						newArray.push(array[i]);
+						array.splice(toIndex, 0, targetRow);
 					}
+					array.splice(fromIndex, 1);
 				}
 
-				if(fromIndex > toIndex) {
-					newArray[toIndex] = targetRow;
-				}
-				this._cache = newArray;
+				var wrapedArray = util.map(array, function(data) {
+					return {
+						dataId: data.dataId,
+						data: data.edited
+					};
+				});
+
+				// _cacheを更新する
+				this._updateCache(wrapedArray)
+
+				// イベントをディスパッチ
+				this.dispatchEvent({
+					type: 'moveRowComplete',
+					dataId: from
+				});
 			},
 
 
@@ -11207,42 +11217,39 @@
 				throw error.NotSupported.createError('Tree');
 			},
 
-			move: function(from, to, isLast) {
+			move: function(from, to, isLastRowInView) {
 				if(from === to) {
 					return;
 				}
 
-				var dataSet = this._cacheDataSet;
-				var array = [];
-				var targetRow = {};
-				var fromIndex;
-				var toIndex;
-				for(var i in dataSet) {
-					if(dataSet[i].dataId === from) {
-						fromIndex = i;
-						targetRow = dataSet[i];
-					} else if(dataSet[i].dataId === to) {
-						toIndex = i;
-						if(isLast) {
-							array.push(dataSet[i]);
-							array.push(targetRow);
-						} else {
-							array.push(targetRow);
-							array.push(dataSet[i]);
-						}
-					} else {
-						array.push(dataSet[i]);
+				var fromIndex = this._idToIndex[from];
+				var toIndex = this._idToIndex[to];
+
+				// idとindex、indexとidの関連配列を更新する
+				if (fromIndex > toIndex) {
+					for(var i = fromIndex; i > toIndex; i--) {
+						this._indexToId[i] = this._indexToId[i - 1];
+						this._idToIndex[this._indexToId[i - 1]] = i;
 					}
+					this._indexToId[toIndex] = from;
+					this._idToIndex[from] = toIndex;
+				} else {
+					if(isLastRowInView) {
+						toIndex += 1;
+					}
+					for(var i = fromIndex; i < toIndex - 1; i++) {
+						this._indexToId[i] = this._indexToId[i + 1];
+						this._idToIndex[this._indexToId[i + 1]] = i;
+					}
+					this._indexToId[toIndex - 1] = from;
+					this._idToIndex[from] = toIndex - 1;
 				}
 
-				if(fromIndex > toIndex) {
-					array[toIndex] = targetRow;
-				}
-				var newDataSet = {};
-				for(var index in array) {
-					newDataSet[index] = array[index];
-				}
-				this._cacheDataSet = newDataSet;
+				// イベントをディスパッチ
+				this.dispatchEvent({
+					type: 'moveRowComplete',
+					dataId: from
+				});
 			},
 
 
@@ -12078,8 +12085,14 @@
 				});
 			},
 
-			move: function(from, to, isLast) {
-				this._dataSearcher.move(from, to, isLast);
+			move: function(from, to, isLastRowInView) {
+				this._dataSearcher.move(from, to, isLastRowInView);
+
+				// イベントをディスパッチ
+				this.dispatchEvent({
+					type: 'moveRowComplete',
+					dataId: from
+				});
 			},
 
 			// --- Private Property --- //
@@ -16345,7 +16358,9 @@
 			refreshSearchStart: 'propagate',
 			refreshSearchSuccess: 'propagate',
 			refreshSearchError: 'propagate',
-			refreshSearchComplete: 'propagate'
+			refreshSearchComplete: 'propagate',
+
+			moveRowComplete: 'propagate'
 		},
 
 		_dataMapper: {
@@ -20047,7 +20062,7 @@
 		// --- Life Cycle Method --- //
 
 		__init: function() {
-			if(this._findInsertIcon().length !== 0) {
+			if (this._findInsertIcon().length !== 0) {
 				return;
 			}
 
@@ -20060,24 +20075,43 @@
 		},
 
 		// --- Public Method --- //
-		
+
 		isMoving: function() {
 			return this._isMoving;
 		},
 
+		enable: function() {
+			this._isEnable = true;
+		},
+
+		disable: function() {
+			this._isEnable = false;
+		},
+
 		// --- Event Handler --- //
 
-		'.gridHeaderColumn h5trackstart': function(context, $el) {
+		'.gridCellFrame[data-h5-dyn-grid-property-name="deriveColumn"] h5trackstart': function(context, $el) {
+			if (!this._isEnable) {
+				return;
+			}
+
 			if ($el.closest('.gridHeaderTopLeftBox').length !== 0) {
 				return;
 			}
 
 			this._selectedId = $el.attr('data-h5-dyn-grid-data-id');
+			this._selectedRow = $el.data('h5DynGridRow');
 			this._trackmoveId = null;
+
+			// 各行のidと座標の関連関係を更新する
 			this._updateRowsPosArray();
 		},
 
-		'.gridHeaderColumn h5trackmove': function(context, $el) {
+		'.gridCellFrame[data-h5-dyn-grid-property-name="deriveColumn"] h5trackmove': function(context, $el) {
+			if (!this._isEnable) {
+				return;
+			}
+
 			if ($el.closest('.gridHeaderTopLeftBox').length !== 0) {
 				return;
 			}
@@ -20085,16 +20119,21 @@
 			this._isMoving = true;
 			this._findCellFrame(this._selectedId).addClass(TRACKING_ROW_CLASS);
 
-			if(context.event.pageY == undefined) {
+			var pageY = context.event.pageY
+			if (pageY == undefined) {
 				return;
 			}
-			var targetId = this._getClosestId(context.event.pageY);
-			this._trackmoveId = targetId;
 
-			var $target = this._findRowHeader(targetId);
+			// 目標行を取得する
+			var row = this._getClosestRow(pageY);
+			this._setLastRowInView(pageY);
+			this._trackmoveId = row.dataId;
+
+			// 目標位置の座標を計算する
+			var $target = this._findRowHeader(row.dataId);
 			var offset;
 			offset = $target.offset();
-			if (this._isLast) {
+			if (this._isLastRowInView) {
 				offset.top += $target.height();
 			}
 
@@ -20104,7 +20143,11 @@
 			}).show();
 		},
 
-		'.gridHeaderColumn h5trackend': function(context) {
+		'.gridCellFrame[data-h5-dyn-grid-property-name="deriveColumn"] h5trackend': function(context) {
+			if (!this._isEnable) {
+				return;
+			}
+
 			this._findInsertIcon().offset({
 				left: 0,
 				top: 0
@@ -20120,21 +20163,58 @@
 			}
 
 			this._isMoving = false;
-			var id = this._getClosestId(context.event.pageY);
-			this._moveColumn(id);
+
+			var pageY = context.event.pageY;
+			var row = this._getClosestRow(pageY);
+			this._setLastRowInView(pageY);
+
+			this._moveRow(row.dataId, row.rowId);
 		},
 
 		// --- Property --- //
 
+		/**
+		 * @private
+		 * @type boolean
+		 */
 		_isMoving: false,
 
+		/**
+		 * @private
+		 * @type boolean
+		 */
+		_isEnable: false,
+
+		/**
+		 * @private
+		 * @type String
+		 */
 		_selectedId: null,
 
-		_isLast: false,
+		/**
+		 * @private
+		 * @type String
+		 */
+		_selectedRow: null,
 
+		/**
+		 * @private
+		 * @type boolean
+		 */
+		_isLastRowInView: false,
+
+		/**
+		 * @private
+		 * @type {Array}
+		 */
 		_rowsPosArray: null,
 
+		/**
+		 * @private
+		 * @type String
+		 */
 		_trackmoveId: null,
+		_id: 'id',
 
 		// --- Private Method --- //
 
@@ -20142,29 +20222,45 @@
 			var $tr = this.$find('.gridHeaderColumnsBox tr');
 			this._rowsPosArray = $tr.map(function(i, element) {
 				return {
-					id: $(element.firstChild).children().attr('data-h5-dyn-grid-data-id'),
+					dataId: $(element.firstChild).children().attr('data-h5-dyn-grid-data-id'),
+					rowId: $(element.firstChild).children().attr('data-h5-dyn-grid-row'),
 					top: $(element).offset().top,
 					height: $(element).height()
 				};
 			}).get();
 		},
 
-		_getClosestId: function(pageY) {
+		_getClosestRow: function(pageY) {
 			var posArray = this._rowsPosArray;
 			var pos;
 			for (var i = 0, len = posArray.length; i < len; i++) {
 				pos = posArray[i];
 				if (pageY < pos.top + pos.height) {
-					this._isLast = false;
-					return pos.id;
+					return {
+						dataId: pos.dataId,
+						rowId: pos.rowId
+					};
 				}
 			}
-			this._isLast = true;
-			return pos.id;
+			return {
+				dataId: pos.dataId,
+				rowId: pos.rowId
+			};
+		},
+
+		_setLastRowInView: function(pageY) {
+			var posArray = this._rowsPosArray;
+			var pos = posArray[posArray.length - 1];
+			if (pageY < pos.top + pos.height) {
+				this._isLastRowInView = false;
+			} else {
+				this._isLastRowInView = true;
+			}
 		},
 
 		_findRowHeader: function(id) {
-			var selector = '.gridHeaderColumn[data-h5-dyn-grid-data-id=' + id + '][data-h5-dyn-grid-column="0"]';
+			var selector = '.gridHeaderColumn[data-h5-dyn-grid-data-id=' + id
+					+ '][data-h5-dyn-grid-column="0"]';
 			return this.$find(selector);
 		},
 
@@ -20177,14 +20273,16 @@
 			return $('.' + INSERT_ROW_ICON_CLASS);
 		},
 
-		_moveColumn: function(targetId) {
+		_moveRow: function(dataId, rowId) {
 			this.trigger('h5gridMoveRow', {
-				from: this._selectedId,
-				to: targetId,
-				isLast: this._isLast
+				fromDataId: this._selectedId,
+				fromRowId: this._selectedRow,
+				toDataId: dataId,
+				toRowId: rowId,
+				isLastRowInView: this._isLastRowInView
 			});
 		}
-	}
+	};
 
 	//=============================
 	// TableGridViewController
@@ -20421,6 +20519,11 @@
 					desc: param.sortDescIconClasses,
 					clear: param.sortClearIconClasses
 				});
+
+				// MoveRowUI
+				if (param.enableMoveRow) {
+					this._moveRowUIController.enable();
+				}
 
 
 				// Enable Controllers
@@ -20746,6 +20849,11 @@
 				return;
 			}
 
+			// D&D用列の場合は無視する
+			if ($target.parent().attr('data-h5-dyn-grid-property-name') === 'deriveColumn') {
+				return;
+			}
+
 			// テキスト選択を避けるために preventDefault
 			event.preventDefault();
 
@@ -20766,7 +20874,8 @@
 				return;
 			}
 
-			if (this._moveRowUIController.isMoving()) {
+			// D&D用列の場合は無視する
+			if ($(context.event.target.parentNode).attr('data-h5-dyn-grid-property-name') === 'deriveColumn') {
 				return;
 			}
 
@@ -20914,14 +21023,78 @@
 		'{rootElement} h5gridMoveRow': function(context) {
 			context.event.stopPropagation();
 
-			// 移動元の行
-			var from = context.evArg.from;
-			// 目標の移動位置
-			var to = context.evArg.to;
+			// 移動元の行のデータID
+			var fromDataId = context.evArg.fromDataId;
+			// 移動元の行のID
+			var fromRowId = parseInt(context.evArg.fromRowId);
+			// 目標の行のデータID
+			var toDataId = context.evArg.toDataId;
+			// 目標の行のID
+			var toRowId = parseInt(context.evArg.toRowId);
 			// 移動位置は可視範囲の最後か
-			var isLast = context.evArg.isLast;
+			var isLastRowInView = context.evArg.isLastRowInView;
 
-			this._gridLogic.getDataSearcher().move(from, to, isLast);
+			// 移動前と移動後は同じの場合
+			if (fromRowId === toRowId || (fromRowId === (toRowId - 1) && !isLastRowInView)) {
+				return;
+			}
+
+			// 行表示位置を調整する
+			this._gridLogic.getDataSearcher().move(fromDataId, toDataId, isLastRowInView);
+
+			var isFocusedCellMoved = false;
+			var focusedCell = this._gridLogic.getFocusedCell();
+			var selectedRange = this._gridLogic.getSelectedRange();
+
+			// 行位置が変更されたので、focusedCellの位置も調整します
+			if ((focusedCell.row > fromRowId && focusedCell.row < toRowId)
+					|| (focusedCell.row === toRowId && isLastRowInView)) {
+				this._gridLogic.focusCell(focusedCell.row - 1, focusedCell.column);
+			} else if (focusedCell.row < fromRowId && focusedCell.row >= toRowId) {
+				this._gridLogic.focusCell(focusedCell.row + 1, focusedCell.column);
+			} else if (focusedCell.row === fromRowId) {
+				if (fromRowId > toRowId || isLastRowInView) {
+					this._gridLogic.focusCell(toRowId, focusedCell.column);
+				} else {
+					this._gridLogic.focusCell(toRowId - 1, focusedCell.column);
+				}
+				isFocusedCellMoved = true;
+			}
+
+			// focusedCellが移動されない場合は、選択範囲も調整する
+			if (!isFocusedCellMoved && selectedRange !== null) {
+				var rowIndex = selectedRange.rowIndex;
+				var rowLength = selectedRange.rowLength;
+				var rowLast = rowIndex + rowLength - 1;
+				if (fromRowId < toRowId) {
+					if (fromRowId < rowIndex && toRowId > rowIndex
+							&& (toRowId < rowLast || (toRowId === rowLast && !isLastRowInView))) {
+						this._gridLogic.selectRange(rowIndex - 1, rowLength + 1,
+								selectedRange.columnIndex, selectedRange.columnLength);
+					} else if (fromRowId < rowIndex
+							&& (toRowId > rowLast || (toRowId === rowLast && isLastRowInView))) {
+						this._gridLogic.selectRange(rowIndex - 1, rowLength,
+								selectedRange.columnIndex, selectedRange.columnLength);
+					} else if (fromRowId >= rowIndex && fromRowId <= rowLast
+							&& (toRowId > rowLast || (toRowId === rowLast && isLastRowInView))) {
+						this._gridLogic.selectRange(rowIndex, rowLength - 1,
+								selectedRange.columnIndex, selectedRange.columnLength);
+					}
+				} else if (fromRowId > toRowId) {
+					if (fromRowId > rowLast && toRowId > rowIndex && toRowId <= rowLast) {
+						this._gridLogic.selectRange(rowIndex, rowLength + 1,
+								selectedRange.columnIndex, selectedRange.columnLength);
+					} else if (fromRowId > rowLast && toRowId <= rowIndex) {
+						this._gridLogic.selectRange(rowIndex + 1, rowLength,
+								selectedRange.columnIndex, selectedRange.columnLength);
+					} else if (fromRowId >= rowIndex && fromRowId <= rowLast && toRowId <= rowIndex) {
+						this._gridLogic.selectRange(rowIndex + 1, rowLength - 1,
+								selectedRange.columnIndex, selectedRange.columnLength);
+					}
+				}
+			} else {
+				// TODO focusedCellが移動された場合は、選択範囲をどう調整しますか検討必要
+			}
 
 			// グリッドを再表現する
 			var visibleProperties = this._gridLogic.getVisibleProperties();
@@ -22564,6 +22737,12 @@
 			this.trigger('gridCommitComplete');
 		},
 
+		'{this._gridLogic} moveRowComplete': function(context) {
+			this.trigger('gridMoveRowComplete', {
+				dataId: context.event.dataId
+			});
+		},
+
 
 		// --- Private Method --- //
 
@@ -22709,6 +22888,11 @@
 							v.nullable();
 							v.func();
 						});
+
+						v.property('enableMoveRow', function(v) {
+							v.nullable();
+							v.type('boolean');
+						});
 					});
 				});
 
@@ -22731,6 +22915,15 @@
 				};
 			}
 
+			var viewParam = param.view.param;
+			if (viewParam.enableMoveRow) {
+				param.mapper.param.visibleProperties.header.splice(0, 0, 'deriveColumn');
+				param.properties['deriveColumn'] = {
+					size: 25,
+					headerValue: ''
+				}
+			}
+
 			var properties = param.properties;
 			var propertyHierarchy;
 			if (!!param.propertyHierarchy) {
@@ -22744,7 +22937,6 @@
 				});
 			}
 
-			var viewParam = param.view.param;
 			var logicParam = {
 				searcher: param.searcher,
 				mapper: param.mapper,

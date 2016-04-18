@@ -5,15 +5,24 @@
 		<title>データグリッドサンプル</title>
 		<link href="/hifive-res/fw/current/h5.css" rel="stylesheet">
 		<link href="../../src/datagrid.css" rel="stylesheet">
-		<link href="./editableGrid.css" rel="stylesheet">
+		<link href="./synchronizedGrid.css" rel="stylesheet">
 
 		<script src="/hifive-res/ext/jquery/jquery-2.1.1.js"></script>
 		<script src="/hifive-res/fw/current/ejs-h5mod.js"></script>
 		<script src="/hifive-res/fw/current/h5.dev.js"></script>
 		<script src="../../src/datagrid.js"></script>
-		<script src="./editableGrid.js"></script>
+		<script src="../../src/datagrid-wrapper.js"></script>
+		<script src="./totalSummaryController.js"></script>
+		<script src="./synchronizedGrid.js"></script>
 	</head>
+	<style>
+	.rowDrag {
+		width: 100%;
+		height: 100%
+	}
+	</style>
 	<body>
 		<div id="grid"></div>
+		<div id="summary"></div>
 	</body>
 </html>

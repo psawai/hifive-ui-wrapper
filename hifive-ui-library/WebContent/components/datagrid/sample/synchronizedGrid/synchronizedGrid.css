@@ -1,0 +1,42 @@
+@charset "UTF-8";
+
+html,body {
+	height: 95%;
+	width: 95%;
+}
+
+#grid {
+	height: 600px;
+	width: 100%;
+	background-color: #F8F8F8;
+}
+
+#summary {
+	width: 125px;
+	height: 60px;
+}
+
+#grid:focus {
+	outline: solid 1px #F80;
+}
+
+.highScore {
+	background-color: #FDD;
+}
+
+.editedCell {
+	background-color: #FFA;
+}
+
+.gridCell input[type="checkbox"] {
+	margin-top: 5px;
+	margin-left: 4px;
+}
+
+.gridSelectedData {
+	background-color: #CCF;
+}
+
+.gridFocusedCell {
+	background-color: #FF8;
+}

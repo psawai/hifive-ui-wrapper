@@ -19,40 +19,6 @@
 		return array[i];
 	}
 
-	function myFunc(param) {
-		return param.price * param.num;
-	}
-
-	function myFunc1(param) {
-		var result = param.old_price / param.price;
-		return parseFloat(result.toFixed(2));
-	}
-
-	function edit(context, $el, cell, controller, func) {
-		var $target = $(context.event.target);
-
-		var value = func($target.val());
-
-		if (typeof value === 'undefined') {
-			return;
-		}
-
-		var oldData = cell.editedData;
-		var propertyName = cell.propertyName;
-
-		var oldValue = oldData[propertyName];
-		if (datagrid.util.deepEquals(oldValue, value)) {
-			return;
-		}
-
-		var dataSource = controller.getDataSource();
-
-		var builder = dataSource.commandBuilder();
-		builder.replaceValue(oldData, propertyName, value);
-		var command = builder.toCommand();
-
-		dataSource.edit(command);
-	}
 
 	var pageController = {
 
@@ -61,20 +27,15 @@
 		__name: 'PageController',
 
 		__meta: {
-			_columnController: {
+			_gridController: {
 				rootElement: '#grid'
-			},
-
-			_summaryController: {
-				rootElement: '#summary'
 			}
 		},
 
+
 		// --- Child Controller --- //
 
-		_columnController: datagrid.wrapper.ColumnController,
-
-		_summaryController: datagrid.wrapper.SummaryController,
+		_gridController: datagrid.GridController,
 
 
 		// --- Life Cycle Method --- //
@@ -83,33 +44,14 @@
 
 			var names = ['Taro', 'Hanako', 'Jiro'];
 			var sourceArray = [];
-			var summaryArray = [];
-			var sum = 0;
+
 			for (var i = 0; i < 10000; i++) {
-				var price = random(100) + 1;
-				var old_price = random(100) + 1;
-				var num = random(10) + 1;
-				sum = sum + num;
 				sourceArray.push({
-					id: String(i),
+					id: (i === 10) ? 'GG' : String(i),
 					name: randomValue(names),
-					old_price: old_price,
-					price: price,
-					num: num,
-					total: myFunc({
-						price: price,
-						num: num
-					}),
-					rate: myFunc1({
-						old_price: old_price,
-						price: price
-					})
+					score: random(11) * 10
 				});
 			}
-			summaryArray.push({
-				id: '0',
-				summary: sum
-			});
 
 			var param = {
 				searcher: {
@@ -122,7 +64,7 @@
 						direction: 'vertical',
 						visibleProperties: {
 							header: ['_select', 'id'],
-							main: ['name', 'old_price', 'price', 'num', 'hoge', 'total', 'rate']
+							main: ['name', 'score', 'hoge']
 						},
 
 						dataDirectionSize: {
@@ -136,10 +78,10 @@
 					param: {
 						cellClassDefinition: {
 							highScore: function(cell) {
-								if (cell.editedData == null || cell.editedData.price == null) {
+								if (cell.editedData == null || cell.editedData.score == null) {
 									return false;
 								}
-								return 80 <= cell.editedData.price;
+								return 80 <= cell.editedData.score;
 							},
 
 							editedCell: function(cell) {
@@ -164,7 +106,7 @@
 						toValue: function(data, cell) {
 							return cell.isSelectedData;
 						},
-
+						
 						formatter: cellFormatter.checkbox(true),
 						changeHandler: changeHandler.selectData()
 					},
@@ -180,28 +122,9 @@
 						filter: ['Taro', 'Jiro', 'Hanako']
 					},
 
-					old_price: {
+					score: {
 						formatter: cellFormatter.input('text'),
 						changeHandler: changeHandler.edit(parseInt),
-						sortable: true
-					},
-
-					price: {
-						formatter: cellFormatter.input('text'),
-						changeHandler: changeHandler.edit(parseInt),
-						sortable: true
-					},
-
-					num: {
-						formatter: cellFormatter.input('text'),
-						changeHandler: function(context, $el, cell) {
-							this.trigger('valueChange', {
-								context: context,
-								$el: $el,
-								cell: cell,
-								func: parseInt
-							});
-						},
 						sortable: true
 					},
 
@@ -214,94 +137,19 @@
 						sortable: true,
 						sortProperty: 'id'
 					}
-				},
-
-				relation: [{
-					sourceColumn: ['price', 'num'],
-					relatedColumn: 'total',
-					relativeFunction: myFunc
-				}, {
-					sourceColumn: ['old_price', 'price'],
-					relatedColumn: 'rate',
-					relativeFunction: myFunc1
-				}]
+				}
 			};
 
-			var dataSource = datagrid.wrapper.createDataSource({
+			var dataSource = datagrid.createDataSource({
 				idProperty: 'id',
 				type: 'local',
 				param: sourceArray
 			});
 
-			this._columnController.activate(dataSource, param);
+			this._gridController.activate(dataSource, param);
 
 			datagrid.util.delay(1000, this.own(function() {
-				this._columnController.search({});
-			}));
-
-			var param1 = {
-				searcher: {
-					type: 'all'
-				},
-
-				mapper: {
-					type: 'property',
-					param: {
-						direction: 'vertical',
-						visibleProperties: {
-							header: ['_select', 'id'],
-							main: ['summary']
-						},
-
-						dataDirectionSize: {
-							size: 20
-						}
-					}
-				},
-
-				view: {
-					type: 'table',
-					param: {
-						cellClassDefinition: {
-							editedCell: function(cell) {
-								return cell.editedValue !== cell.originalValue;
-							}
-						}
-					}
-				},
-
-				properties: {
-					_select: {
-						size: 25,
-						enableResize: false,
-						toValue: function(data, cell) {
-							return cell.isSelectedData;
-						},
-
-						formatter: cellFormatter.checkbox(true),
-						changeHandler: changeHandler.selectData()
-					},
-
-					id: {
-						size: 50
-					},
-
-					summary: {
-
-					}
-				},
-			};
-
-			var dataSource1 = datagrid.wrapper.createDataSource({
-				idProperty: 'id',
-				type: 'local',
-				param: summaryArray
-			});
-
-			this._summaryController.activate(dataSource1, param1);
-
-			datagrid.util.delay(1000, this.own(function() {
-				this._summaryController.search({});
+				this._gridController.search({});
 			}));
 		},
 
@@ -314,49 +162,7 @@
 		},
 
 		'{window} resize': function() {
-			this._columnController.refresh();
-		},
-
-		'{rootElement} valueChange': function(context) {
-			var cell = context.evArg.cell;
-			var $el = context.evArg.$el;
-			var con = context.evArg.context;
-			var func = context.evArg.func;
-			edit(con, $el, cell, this._columnController, func);
-			var dataSource = this._summaryController.getDataSource();
-			var dataSource1 = this._columnController.getDataSource();
-			var dataSet = dataSource1.getReplacedDataSet();
-			var sourceDataArray = dataSource1.getDataAccessor().getSourceDataArray();
-			var summary = 0;
-			for (var i = 0; i < sourceDataArray.length; i++) {
-				var isEdit = false;
-				var editedData;
-				for ( var index in dataSet) {
-					if (sourceDataArray[i].id === dataSet[index].edited.id) {
-						isEdit = true;
-						editedData = dataSet[index].edited;
-						break;
-					}
-				}
-				if (isEdit) {
-					summary = summary + editedData.num;
-				} else {
-					summary = summary + sourceDataArray[i].num;
-				}
-			}
-			var originSummary;
-			if (dataSource.hasChange()) {
-				originSummary = dataSource.getReplacedDataSet()[0].edited.summary;
-			} else {
-				originSummary = dataSource.getDataAccessor().getSourceDataArray()[0].summary;
-			}
-			var builder = dataSource.commandBuilder();
-			builder.replaceValue({
-				id: '0',
-				summary: originSummary
-			}, 'summary', summary);
-			var command = builder.toCommand();
-			dataSource.edit(command);
+			this._gridController.refresh();
 		}
 
 	};

@@ -17,17 +17,19 @@
 	// =========================================================================
 
 	var datagrid = h5.ui.components.datagrid;
+	
+	var cellFormatter = datagrid.view.dom.cellFormatter
 
 	//=============================
-	// ColumnController
+	// SynchronizedController
 	//=============================
 
-	var columnController = {
+	var synchronizedController = {
 
 		/**
-		 * @memberOf ColumnController
+		 * @memberOf SynchronizedController
 		 */
-		__name: 'h5.ui.components.datagrid.wrapper.ColumnController',
+		__name: 'h5.ui.components.datagrid.wrapper.SynchronizedController',
 
 		// --- Child Controller --- //
 
@@ -43,61 +45,56 @@
 		 * @returns {Promise} 起動を待つ Promise
 		 */
 		activate: function(dataSource, param) {
-			if (param.relation !== undefined) {
-				for (var idx = 0, len = param.relation.length; idx < len; idx++) {
-					var relation = param.relation[idx];
+			if (!param.relation) {
+				return this._gridController.activate(dataSource, param);
+			}
 
-					param.properties[relation.relatedColumn] = {
-						toValue: function(data, cell) {
-							var currentRelation;
+			for (var idx = 0, len = param.relation.length; idx < len; idx++) {
+				var relation = param.relation[idx];
 
-							for (var j = 0, len1 = param.relation.length; j < len1; j++) {
-								if (param.relation[j].relatedColumn === cell.propertyName) {
-									currentRelation = param.relation[j];
-								}
+				param.properties[relation.relatedColumn] = {
+					toValue: function(data, cell) {
+						var currentRelation;
+
+						for (var j = 0, len1 = param.relation.length; j < len1; j++) {
+							if (param.relation[j].relatedColumn === cell.propertyName) {
+								currentRelation = param.relation[j];
 							}
+						}
 
-							var parameter = {};
-							for (var i = 0, len2 = currentRelation.sourceColumn.length; i < len2; i++) {
-								parameter[currentRelation.sourceColumn[i]] = data[currentRelation.sourceColumn[i]];
-							}
+						// 連動列を計算するため、必要なパラメータを生成します
+						var parameter = {};
+						for (var i = 0, len2 = currentRelation.sourceColumn.length; i < len2; i++) {
+							parameter[currentRelation.sourceColumn[i]] = data[currentRelation.sourceColumn[i]];
+						}
 
-							var oldData = data[currentRelation.relatedColumn];
-							var newData = currentRelation.relativeFunction(parameter);
+						var oldData = data[currentRelation.relatedColumn];
+						var newData = currentRelation.relativeFunction(parameter);
 
-							if (oldData !== newData) {
-								var builder = dataSource.commandBuilder();
-								builder.replaceValue(data, currentRelation.relatedColumn, newData);
-								var command = builder.toCommand();
-								dataSource.edit(command);
-							}
+						// 連動列の値をデータソースに反映します
+						if (oldData !== newData) {
+							var builder = dataSource.commandBuilder();
+							builder.replaceValue(data, currentRelation.relatedColumn, newData);
+							var command = builder.toCommand();
+							dataSource.edit(command);
+						}
 
-							return newData;
-						},
+						return newData;
+					},
 
-						sortable: true
-					};
-				}
+					sortable: true
+				};
 			}
 			return this._gridController.activate(dataSource, param);
 		},
 
 		/**
-		 * 検索します。
+		 * グリッドコントローラを取得します。
 		 * 
-		 * @param {Object} param
-		 * @param [filter]
-		 * @param [sort]
+		 * @returns {GridController} グリッドコントローラ
 		 */
-		search: function(param, filter, sort) {
-			this._gridController.search(param, filter, sort);
-		},
-
-		/**
-		 * グリッドを再描画します。
-		 */
-		refresh: function() {
-			this._gridController.refresh();
+		getGridController: function() {
+			return this._gridController;
 		},
 
 		/**
@@ -109,94 +106,12 @@
 			return this._gridController.getDataSource();
 		}
 
-	};
-
-	//=============================
-	// SummaryController
-	//=============================
-
-	var summaryController = {
-
-		/**
-		 * @memberOf SummaryController
-		 */
-		__name: 'h5.ui.components.datagrid.wrapper.SummaryController',
-
-		// --- Child Controller --- //
-
-		_gridController: datagrid.GridController,
-
-		// --- Public Method --- //
-
-		/**
-		 * このコントローラを起動します。
-		 * 
-		 * @param {DataSource} dataSource
-		 * @param {GridControllerParam} param
-		 * @returns {Promise} 起動を待つ Promise
-		 */
-		activate: function(dataSource, param) {
-			return this._gridController.activate(dataSource, param);
-		},
-
-		/**
-		 * 検索します。
-		 * 
-		 * @param {Object} param
-		 * @param [filter]
-		 * @param [sort]
-		 */
-		search: function(param, filter, sort) {
-			this._gridController.search(param, filter, sort);
-		},
-
-		/**
-		 * グリッドを再描画します。
-		 */
-		refresh: function() {
-			this._gridController.refresh();
-		},
-
-		/**
-		 * 参照しているデータソースを返します。
-		 * 
-		 * @returns {DataSource} データソース
-		 */
-		getDataSource: function() {
-			return this._gridController.getDataSource();
-		}
-
-	};
-
-	//=============================
-	// Function
-	//=============================
-
-	/**
-	 * @memberOf h5.ui.components.datagrid.wrapper
-	 * @param param パラメータ
-	 * @returns {DataSource} データソース
-	 */
-	function createDataSource(param) {
-		return datagrid.createDataSource(param);
-	}
-
-	// =========================================================================
-	//
-	// Body
-	//
-	// =========================================================================
-
-	var exports = {
-		createDataSource: createDataSource
 	};
 
 	//=============================
 	// Expose to window
 	//=============================
 
-	h5.u.obj.expose(NAMESPACE, exports);
-	h5.core.expose(columnController);
-	h5.core.expose(summaryController);
+	h5.core.expose(synchronizedController);
 
 })();
