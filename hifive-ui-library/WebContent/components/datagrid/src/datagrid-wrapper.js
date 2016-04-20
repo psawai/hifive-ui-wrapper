@@ -17,8 +17,6 @@
 	// =========================================================================
 
 	var datagrid = h5.ui.components.datagrid;
-	
-	var cellFormatter = datagrid.view.dom.cellFormatter
 
 	//=============================
 	// SynchronizedController
