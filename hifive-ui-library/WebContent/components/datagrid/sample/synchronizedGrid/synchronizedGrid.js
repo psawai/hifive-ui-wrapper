@@ -126,8 +126,10 @@
 						disableInput: function() {
 							return false;
 						},
-						
+
 						enableMoveRow: true,
+						trackRowMoveColumn: 'id',
+						selectRangeAction: 'dynamic',
 
 						sortAscIconClasses: ['aaaaaa'],
 						sortDescIconClasses: [],
