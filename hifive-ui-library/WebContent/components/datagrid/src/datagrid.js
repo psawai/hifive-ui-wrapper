@@ -6516,9 +6516,19 @@
 				v.func();
 			});
 
-			v.property('rowMovable', function(v) {
+			v.property('enableMoveRow', function(v) {
 				v.nullable();
 				v.type('boolean');
+			});
+
+			v.property('trackRowMoveColumn', function(v) {
+				v.nullable();
+				v.type('string');
+			});
+
+			v.property('selectRangeAction', function(v) {
+				v.nullable();
+				v.type('string');
 			});
 
 			v.property('propertyUI', function(v) {
@@ -20050,11 +20060,20 @@
 	// MoveRowUIController
 	//=============================
 
+	/**
+	 * グリッドの行移動を処理するコントローラ
+	 * 
+	 * @class
+	 * @name MoveRowUIController
+	 */
+
+	/** @lends MoveRowUIController# */
 	var moveRowUIController = {
 
 		// --- Metadata --- //
 
 		/**
+		 * @private
 		 * @memberOf MoveRowUIController
 		 */
 		__name: 'h5.ui.components.datagrid.view.dom.MoveRowUIController',
@@ -20076,21 +20095,38 @@
 
 		// --- Public Method --- //
 
+		/**
+		 * @returns グリッドは行移動を行っているかどうか
+		 */
 		isMoving: function() {
 			return this._isMoving;
 		},
 
+		/**
+		 * 行移動が有効にします
+		 */
 		enable: function() {
 			this._isEnable = true;
 		},
 
+		/**
+		 * 行移動が無効にします
+		 */
 		disable: function() {
 			this._isEnable = false;
 		},
 
+		/**
+		 * 行移動時、選択範囲の動作を設定する。
+		 * nullの場合は、'static'として処理を続ける。
+		 */
+		setSelectRangeAction: function(selectRangeAction) {
+			this._selectRangeAction = selectRangeAction;
+		},
+
 		// --- Event Handler --- //
 
-		'.gridCellFrame[data-h5-dyn-grid-property-name="deriveColumn"] h5trackstart': function(
+		'.gridCellFrame.gridCellDrag h5trackstart': function(
 				context, $el) {
 			if (!this._isEnable) {
 				return;
@@ -20108,7 +20144,7 @@
 			this._updateRowsPosArray();
 		},
 
-		'.gridCellFrame[data-h5-dyn-grid-property-name="deriveColumn"] h5trackmove': function(
+		'.gridCellFrame.gridCellDrag h5trackmove': function(
 				context, $el) {
 			if (!this._isEnable) {
 				return;
@@ -20145,7 +20181,7 @@
 			}).show();
 		},
 
-		'.gridCellFrame[data-h5-dyn-grid-property-name="deriveColumn"] h5trackend': function(
+		'.gridCellFrame.gridCellDrag h5trackend': function(
 				context) {
 			if (!this._isEnable) {
 				return;
@@ -20192,6 +20228,12 @@
 		 * @private
 		 * @type String
 		 */
+		_selectRangeAction: null,
+
+		/**
+		 * @private
+		 * @type String
+		 */
 		_selectedId: null,
 
 		/**
@@ -20217,10 +20259,12 @@
 		 * @type String
 		 */
 		_trackmoveId: null,
-		_id: 'id',
 
 		// --- Private Method --- //
 
+		/**
+		 * 行移動開始前、各行のID、位置と高さ情報を取得します
+		 */
 		_updateRowsPosArray: function() {
 			var $tr = this.$find('.gridHeaderColumnsBox tr');
 			this._rowsPosArray = $tr.map(function(i, element) {
@@ -20233,6 +20277,12 @@
 			}).get();
 		},
 
+		/**
+		 * マウス位置によって一番近くの行の情報を取得
+		 * 
+		 * @param pageY マウス位置のY座標
+		 * @returns {Object} 取得した行の情報を返す
+		 */
 		_getClosestRow: function(pageY) {
 			var posArray = this._rowsPosArray;
 			var pos;
@@ -20251,6 +20301,11 @@
 			};
 		},
 
+		/**
+		 * マウス位置によって可視範囲の最後かどうかを設定します
+		 * 
+		 * @param pageY マウス位置のY座標
+		 */
 		_setLastRowInView: function(pageY) {
 			var posArray = this._rowsPosArray;
 			var pos = posArray[posArray.length - 1];
@@ -20261,28 +20316,52 @@
 			}
 		},
 
+		/**
+		 * ヘッダ列に指定するIDの行を探す
+		 * 
+		 * @param id データID
+		 * @returns 探したオブジェクト
+		 */
 		_findRowHeader: function(id) {
 			var selector = '.gridHeaderColumn[data-h5-dyn-grid-data-id=' + id
 					+ '][data-h5-dyn-grid-column="0"]';
 			return this.$find(selector);
 		},
 
+		/**
+		 * 指定するIDの行を探す
+		 * 
+		 * @param id
+		 * @returns 行のすべてのセルを返す
+		 */
 		_findCellFrame: function(id) {
 			var selector = '.gridCellFrame[data-h5-dyn-grid-data-id=' + id + ']';
 			return this.$find(selector);
 		},
 
+		/**
+		 * 移動位置を示すマークを探す
+		 * 
+		 * @returns 探したオブジェクト
+		 */
 		_findInsertIcon: function() {
 			return $('.' + INSERT_ROW_ICON_CLASS);
 		},
 
+		/**
+		 * h5gridMoveRowイベントをトリガー
+		 * 
+		 * @param dataId データID
+		 * @param rowId 行ID
+		 */
 		_moveRow: function(dataId, rowId) {
 			this.trigger('h5gridMoveRow', {
 				fromDataId: this._selectedId,
 				fromRowId: this._selectedRow,
 				toDataId: dataId,
 				toRowId: rowId,
-				isLastRowInView: this._isLastRowInView
+				isLastRowInView: this._isLastRowInView,
+				selectRangeAction: this._selectRangeAction
 			});
 		}
 	};
@@ -20526,6 +20605,7 @@
 				// MoveRowUI
 				if (param.enableMoveRow) {
 					this._moveRowUIController.enable();
+					this._moveRowUIController.setSelectRangeAction(param.selectRangeAction);
 				}
 
 
@@ -20877,8 +20957,9 @@
 				return;
 			}
 
-			// D&D用列の場合は無視する
-			if ($(context.event.target.parentNode).attr('data-h5-dyn-grid-property-name') === 'deriveColumn') {
+			// D&D用の列、あるいは行移動中の場合は無視する
+			if ($(context.event.target.parentNode).attr('data-h5-dyn-grid-property-name') === 'deriveColumn'
+					|| this._moveRowUIController.isMoving()) {
 				return;
 			}
 
@@ -21036,6 +21117,8 @@
 			var toRowId = parseInt(context.evArg.toRowId);
 			// 移動位置は可視範囲の最後か
 			var isLastRowInView = context.evArg.isLastRowInView;
+			// 行移動後、選択範囲があれば、選択範囲の動作区分
+			var selectRangeAction = context.evArg.selectRangeAction;
 
 			// 移動前と移動後は同じの場合
 			if (fromRowId === toRowId || (fromRowId === (toRowId - 1) && !isLastRowInView)) {
@@ -21045,58 +21128,77 @@
 			// 行表示位置を調整する
 			this._gridLogic.getDataSearcher().move(fromDataId, toDataId, isLastRowInView);
 
-			var isFocusedCellMoved = false;
 			var focusedCell = this._gridLogic.getFocusedCell();
 			var selectedRange = this._gridLogic.getSelectedRange();
 
-			// 行位置が変更されたので、focusedCellの位置も調整します
-			if ((focusedCell.row > fromRowId && focusedCell.row < toRowId)
-					|| (focusedCell.row === toRowId && isLastRowInView)) {
-				this._gridLogic.focusCell(focusedCell.row - 1, focusedCell.column);
-			} else if (focusedCell.row < fromRowId && focusedCell.row >= toRowId) {
-				this._gridLogic.focusCell(focusedCell.row + 1, focusedCell.column);
-			} else if (focusedCell.row === fromRowId) {
-				if (fromRowId > toRowId || isLastRowInView) {
-					this._gridLogic.focusCell(toRowId, focusedCell.column);
-				} else {
-					this._gridLogic.focusCell(toRowId - 1, focusedCell.column);
+			if (selectRangeAction === 'clear') {
+				// 行位置が変更されたので、focusedCellの位置も調整します
+				if ((focusedCell.row > fromRowId && focusedCell.row < toRowId)
+						|| (focusedCell.row === toRowId && isLastRowInView)) {
+					this._gridLogic.focusCell(focusedCell.row - 1, focusedCell.column);
+				} else if (focusedCell.row < fromRowId && focusedCell.row >= toRowId) {
+					this._gridLogic.focusCell(focusedCell.row + 1, focusedCell.column);
+				} else if (focusedCell.row === fromRowId) {
+					if (fromRowId > toRowId || isLastRowInView) {
+						this._gridLogic.focusCell(toRowId, focusedCell.column);
+					} else {
+						this._gridLogic.focusCell(toRowId - 1, focusedCell.column);
+					}
 				}
-				isFocusedCellMoved = true;
-			}
 
-			// focusedCellが移動されない場合は、選択範囲も調整する
-			if (!isFocusedCellMoved && selectedRange !== null) {
-				var rowIndex = selectedRange.rowIndex;
-				var rowLength = selectedRange.rowLength;
-				var rowLast = rowIndex + rowLength - 1;
-				if (fromRowId < toRowId) {
-					if (fromRowId < rowIndex && toRowId > rowIndex
-							&& (toRowId < rowLast || (toRowId === rowLast && !isLastRowInView))) {
-						this._gridLogic.selectRange(rowIndex - 1, rowLength + 1,
-								selectedRange.columnIndex, selectedRange.columnLength);
-					} else if (fromRowId < rowIndex
-							&& (toRowId > rowLast || (toRowId === rowLast && isLastRowInView))) {
-						this._gridLogic.selectRange(rowIndex - 1, rowLength,
-								selectedRange.columnIndex, selectedRange.columnLength);
-					} else if (fromRowId >= rowIndex && fromRowId <= rowLast
-							&& (toRowId > rowLast || (toRowId === rowLast && isLastRowInView))) {
-						this._gridLogic.selectRange(rowIndex, rowLength - 1,
-								selectedRange.columnIndex, selectedRange.columnLength);
+				var newFocusedCell = this._gridLogic.getFocusedCell();
+				// 選択範囲をクリア
+				this._gridLogic.selectRange(newFocusedCell.row, 1, newFocusedCell.column, 1);
+			} else if (selectRangeAction === 'dynamic') {
+				var isFocusedCellMoved = false;
+				// 行位置が変更されたので、focusedCellの位置も調整します
+				if ((focusedCell.row > fromRowId && focusedCell.row < toRowId)
+						|| (focusedCell.row === toRowId && isLastRowInView)) {
+					this._gridLogic.focusCell(focusedCell.row - 1, focusedCell.column);
+				} else if (focusedCell.row < fromRowId && focusedCell.row >= toRowId) {
+					this._gridLogic.focusCell(focusedCell.row + 1, focusedCell.column);
+				} else if (focusedCell.row === fromRowId) {
+					if (fromRowId > toRowId || isLastRowInView) {
+						this._gridLogic.focusCell(toRowId, focusedCell.column);
+					} else {
+						this._gridLogic.focusCell(toRowId - 1, focusedCell.column);
 					}
-				} else if (fromRowId > toRowId) {
-					if (fromRowId > rowLast && toRowId > rowIndex && toRowId <= rowLast) {
-						this._gridLogic.selectRange(rowIndex, rowLength + 1,
-								selectedRange.columnIndex, selectedRange.columnLength);
-					} else if (fromRowId > rowLast && toRowId <= rowIndex) {
-						this._gridLogic.selectRange(rowIndex + 1, rowLength,
-								selectedRange.columnIndex, selectedRange.columnLength);
-					} else if (fromRowId >= rowIndex && fromRowId <= rowLast && toRowId <= rowIndex) {
-						this._gridLogic.selectRange(rowIndex + 1, rowLength - 1,
-								selectedRange.columnIndex, selectedRange.columnLength);
+					isFocusedCellMoved = true
+				}
+
+				// focusedCellが移動されない場合は、選択範囲も調整する
+				if (!isFocusedCellMoved && selectedRange !== null) {
+					var rowIndex = selectedRange.rowIndex;
+					var rowLength = selectedRange.rowLength;
+					var rowLast = rowIndex + rowLength - 1;
+					if (fromRowId < toRowId) {
+						if (fromRowId < rowIndex && toRowId > rowIndex
+								&& (toRowId < rowLast || (toRowId === rowLast && !isLastRowInView))) {
+							this._gridLogic.selectRange(rowIndex - 1, rowLength + 1,
+									selectedRange.columnIndex, selectedRange.columnLength);
+						} else if (fromRowId < rowIndex
+								&& (toRowId > rowLast || (toRowId === rowLast && isLastRowInView))) {
+							this._gridLogic.selectRange(rowIndex - 1, rowLength,
+									selectedRange.columnIndex, selectedRange.columnLength);
+						} else if (fromRowId >= rowIndex && fromRowId <= rowLast
+								&& (toRowId > rowLast || (toRowId === rowLast && isLastRowInView))) {
+							this._gridLogic.selectRange(rowIndex, rowLength - 1,
+									selectedRange.columnIndex, selectedRange.columnLength);
+						}
+					} else if (fromRowId > toRowId) {
+						if (fromRowId > rowLast && toRowId > rowIndex && toRowId <= rowLast) {
+							this._gridLogic.selectRange(rowIndex, rowLength + 1,
+									selectedRange.columnIndex, selectedRange.columnLength);
+						} else if (fromRowId > rowLast && toRowId <= rowIndex) {
+							this._gridLogic.selectRange(rowIndex + 1, rowLength,
+									selectedRange.columnIndex, selectedRange.columnLength);
+						} else if (fromRowId >= rowIndex && fromRowId <= rowLast
+								&& toRowId <= rowIndex) {
+							this._gridLogic.selectRange(rowIndex + 1, rowLength - 1,
+									selectedRange.columnIndex, selectedRange.columnLength);
+						}
 					}
 				}
-			} else {
-				// TODO focusedCellが移動された場合は、選択範囲をどう調整しますか検討必要
 			}
 
 			// グリッドを再表現する
@@ -22896,6 +22998,16 @@
 							v.nullable();
 							v.type('boolean');
 						});
+
+						v.property('trackRowMoveColumn', function(v) {
+							v.nullable();
+							v.type('string');
+						});
+
+						v.property('selectRangeAction', function(v) {
+							v.nullable();
+							v.type('string');
+						});
 					});
 				});
 
@@ -22920,10 +23032,26 @@
 
 			var viewParam = param.view.param;
 			if (viewParam.enableMoveRow) {
-				param.mapper.param.visibleProperties.header.splice(0, 0, 'deriveColumn');
-				param.properties['deriveColumn'] = {
-					size: 25,
-					headerValue: ''
+				if (viewParam.trackRowMoveColumn == null) {
+					param.mapper.param.visibleProperties.header.splice(0, 0, 'deriveColumn');
+					param.properties['deriveColumn'] = {
+						size: 25,
+						headerValue: ''
+					};
+					viewParam.cellClassDefinition['gridCellDrag'] = function(cell) {
+						if (!cell.isPropertyHeader && cell.propertyName === 'deriveColumn') {
+							return true;
+						}
+						return false;
+					};
+				} else {
+					viewParam.cellClassDefinition['gridCellDrag'] = function(cell) {
+						if (!cell.isPropertyHeader
+								&& cell.propertyName === viewParam.trackRowMoveColumn) {
+							return true;
+						}
+						return false;
+					};
 				}
 			}
 
